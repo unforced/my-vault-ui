@@ -39,9 +39,20 @@ export interface SpecEntity {
   fields: Record<string, unknown>
 }
 
+// One linked capture in the spec. The on-disk JSON allows either a bare id
+// string (uses the entity's default relationship) or an object carrying a
+// per-capture relationship override. We normalize to this object form in memory
+// and re-serialize compactly (bare string when no override) on write.
+export interface SpecCapture {
+  id: string
+  // When set + different from the default, this capture is linked by this edge
+  // instead of the spec's default `relationship`.
+  relationship?: string
+}
+
 export interface SpecLinks {
   relationship: string
-  captures: string[]
+  captures: SpecCapture[]
 }
 
 export interface ProposalSpec {
@@ -117,6 +128,49 @@ function asStringArray(v: unknown): string[] {
   return v.map((x) => String(x).trim()).filter(Boolean)
 }
 
+// Parse links.captures, accepting BOTH the legacy bare-id form
+//   ["id", ...]
+// and the per-capture override form
+//   [{ "id": "…", "relationship": "…" }, ...]
+// (the two may be mixed). Returns normalized {id, relationship?} entries with
+// empty ids dropped; a blank/whitespace relationship is treated as "no override".
+export function parseCaptures(v: unknown): SpecCapture[] {
+  if (!Array.isArray(v)) return []
+  const out: SpecCapture[] = []
+  for (const x of v) {
+    if (typeof x === 'string') {
+      const id = x.trim()
+      if (id) out.push({ id })
+    } else if (x && typeof x === 'object') {
+      const id = String((x as { id?: unknown }).id ?? '').trim()
+      if (!id) continue
+      const rel = String((x as { relationship?: unknown }).relationship ?? '').trim()
+      out.push(rel ? { id, relationship: rel } : { id })
+    }
+  }
+  return out
+}
+
+// Re-serialize captures to the most compact on-disk form: a bare id string when
+// there's no (or a no-op) override, else { id, relationship }. `defaultRel` is
+// the spec's default edge — an override equal to it is dropped (it's not an
+// override). De-duped by id (first entry with an override wins).
+export function serializeCaptures(
+  captures: SpecCapture[],
+  defaultRel: string,
+): (string | SpecCapture)[] {
+  const seen = new Set<string>()
+  const out: (string | SpecCapture)[] = []
+  for (const c of captures) {
+    const id = c.id.trim()
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    const rel = c.relationship?.trim()
+    out.push(rel && rel !== defaultRel ? { id, relationship: rel } : id)
+  }
+  return out
+}
+
 // Reconstruct a spec from a legacy proposal's metadata.* (transition safety).
 export function specFromMetadata(note: Note): ProposalSpec {
   const m = note.metadata ?? {}
@@ -127,7 +181,7 @@ export function specFromMetadata(note: Note): ProposalSpec {
   const confidence = Number.isFinite(Number(m.confidence)) ? Number(m.confidence) : 0
   const evidence = String(m.evidence ?? '')
   const relationship = String(m.relationship ?? suggestRel(type))
-  const captures = asStringArray(m.capture_ids ?? (m.capture_id ? [m.capture_id] : []))
+  const captures = parseCaptures(m.capture_ids ?? (m.capture_id ? [m.capture_id] : []))
   return {
     v: 1,
     kind: 'create_entity',
@@ -173,7 +227,7 @@ export function parseProposalSpec(note: Note): ProposalSpec {
           },
           links: {
             relationship: String(parsed.links?.relationship ?? suggestRel(type)),
-            captures: asStringArray(parsed.links?.captures),
+            captures: parseCaptures(parsed.links?.captures),
           },
         }
       }

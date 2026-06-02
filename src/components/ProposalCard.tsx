@@ -24,6 +24,7 @@ import {
 } from '../vault/util'
 import {
   parseProposalSpec,
+  serializeCaptures,
   suggestRel,
   TYPE_FOLDER,
   withName,
@@ -33,15 +34,20 @@ import {
   PLACE_KINDS,
   REFERENCE_KINDS,
   type ProposalSpec,
+  type SpecCapture,
 } from '../vault/proposalSpec'
+import { CaptureView } from './CaptureView'
 import { LinkIcon, PlusIcon } from './icons'
 
 const RELATIONSHIPS = ['relates-to', 'mentions', 'at', 'part-of', 'practices', 'uses', 'references']
 
-// One supporting capture, with its selected/deselected state.
+// One supporting capture, with its selected/deselected state and an OPTIONAL
+// per-row relationship override. When `relationship` is undefined the row links
+// by the spec's default edge; when set it links by that edge instead.
 interface CaptureRow {
   note: Note
   selected: boolean
+  relationship?: string
 }
 
 export function ProposalCard({
@@ -109,16 +115,33 @@ export function ProposalCard({
   // Curated path: the spec's links.captures ARE the supporting set (pre-checked).
   // The search box then becomes an "add more captures" affordance. Fallback path
   // (no captures in the spec): search by entity_name, results replace the list.
-  const curatedIds = useMemo<string[]>(
-    () => spec.links.captures.filter((id) => id.trim() !== ''),
-    // captures come from the immutable proposal via baseSpec; safe to memo on it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [baseSpec],
-  )
+  // Curated captures, DEDUPED by id (a spec may list the same id twice — see the
+  // Rachel Isaacson case — and we must render each capture exactly once). The
+  // first occurrence wins so an early per-capture override isn't lost.
+  const curatedCaptures = useMemo<SpecCapture[]>(() => {
+    const seen = new Set<string>()
+    const out: SpecCapture[] = []
+    for (const c of baseSpec.links.captures) {
+      const id = c.id.trim()
+      if (!id || seen.has(id)) continue
+      seen.add(id)
+      out.push(c)
+    }
+    return out
+  }, [baseSpec])
+  const curatedIds = useMemo(() => curatedCaptures.map((c) => c.id), [curatedCaptures])
+  // id → per-capture relationship override carried in the spec (if any).
+  const curatedRelById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const c of curatedCaptures) if (c.relationship) m.set(c.id, c.relationship)
+    return m
+  }, [curatedCaptures])
   const hasCurated = curatedIds.length > 0
 
   const [searchTerm, setSearchTerm] = useState(hasCurated ? '' : baseName)
   const [rows, setRows] = useState<CaptureRow[]>([])
+  // Capability B: the capture whose full note is open in the read-only modal.
+  const [viewing, setViewing] = useState<Note | null>(null)
   const [content, setContent] = useState<Record<string, string | null>>({})
   const [loadingCaps, setLoadingCaps] = useState(true)
   const [capError, setCapError] = useState<string | null>(null)
@@ -141,7 +164,21 @@ export function ProposalCard({
       try {
         const found = await fetchCapturesByIds(curatedIds)
         if (cancelled) return
-        setRows(found.map((n) => ({ note: n, selected: !linkedIds.has(n.id) })))
+        // Dedupe by the RESOLVED note id (distinct curated ids could resolve to
+        // the same note) so each capture renders exactly once; carry any
+        // per-capture relationship override from the spec.
+        const seen = new Set<string>()
+        const next: CaptureRow[] = []
+        for (const n of found) {
+          if (seen.has(n.id)) continue
+          seen.add(n.id)
+          next.push({
+            note: n,
+            selected: !linkedIds.has(n.id),
+            relationship: curatedRelById.get(n.id),
+          })
+        }
+        setRows(next)
       } catch (e) {
         if (cancelled) return
         setCapError(e instanceof Error ? e.message : String(e))
@@ -173,13 +210,28 @@ export function ProposalCard({
         if (hasCurated) {
           setRows((prev) => {
             const have = new Set(prev.map((r) => r.note.id))
-            const additions = found
-              .filter((n) => !have.has(n.id))
-              .map((n) => ({ note: n, selected: !linkedIds.has(n.id) }))
+            const additions: CaptureRow[] = []
+            for (const n of found) {
+              if (have.has(n.id)) continue
+              have.add(n.id) // also guards dups WITHIN this search result
+              additions.push({
+                note: n,
+                selected: !linkedIds.has(n.id),
+                relationship: curatedRelById.get(n.id),
+              })
+            }
             return additions.length ? [...prev, ...additions] : prev
           })
         } else {
-          setRows(found.map((n) => ({ note: n, selected: !linkedIds.has(n.id) })))
+          // Fallback (no curated set): results replace — still dedupe by id.
+          const seen = new Set<string>()
+          const next: CaptureRow[] = []
+          for (const n of found) {
+            if (seen.has(n.id)) continue
+            seen.add(n.id)
+            next.push({ note: n, selected: !linkedIds.has(n.id) })
+          }
+          setRows(next)
         }
       } catch (e) {
         setCapError(e instanceof Error ? e.message : String(e))
@@ -224,6 +276,17 @@ export function ProposalCard({
   }
   function setAll(on: boolean) {
     setRows((rs) => rs.map((r) => ({ ...r, selected: on })))
+  }
+  // Per-row relationship override. Picking the default value clears the override
+  // (so the row tracks the default again if it later changes).
+  function setRowRel(id: string, rel: string) {
+    setRows((rs) =>
+      rs.map((r) =>
+        r.note.id === id
+          ? { ...r, relationship: rel === defaultRel ? undefined : rel }
+          : r,
+      ),
+    )
   }
 
   // ── Spec editors (each updates the local spec copy) ──
@@ -285,7 +348,11 @@ export function ProposalCard({
   const effectiveType = target ? (entityTypeOf(target) ?? type) : type
   const effectivePath = target ? target.path : spec.entity.path
   const effectiveName = target ? entityName(target) : name.trim()
-  const effectiveRel = relationship || suggestRel(effectiveType as EntityType)
+  // The DEFAULT relationship for this entity (derived from its type, overridable
+  // once via the picker). Each capture row links by its own override, else this.
+  const defaultRel = relationship || suggestRel(effectiveType as EntityType)
+  // The effective edge a given row links by: its override, else the default.
+  const relForRow = (r: CaptureRow) => r.relationship ?? defaultRel
 
   // Shared worker: create (maybe) + link selected captures. Does NOT resolve.
   async function doCreateAndLink(): Promise<{ summary: string; linked: string[] }> {
@@ -305,7 +372,8 @@ export function ProposalCard({
     const linkedNow: string[] = []
     for (const r of selected) {
       setProgress(`Linking captures… (${linked + 1}/${selected.length})`)
-      await linkCapture(r.note.id, effectivePath, effectiveRel)
+      // Link EACH capture by ITS relationship (per-row override, else default).
+      await linkCapture(r.note.id, effectivePath, relForRow(r))
       linkedNow.push(r.note.id)
       linked++
     }
@@ -313,18 +381,29 @@ export function ProposalCard({
     return { summary: `${where}, linked ${linked} capture${linked === 1 ? '' : 's'}`, linked: linkedNow }
   }
 
-  // The edited spec to persist on resolve: reflects the current selected captures
-  // so the audit record matches what was executed.
-  function executedSpec(linkedNow: string[]): ProposalSpec {
-    return {
+  // The edited spec to persist on resolve, JSON-serialized: reflects the
+  // captures actually executed AND their per-capture relationships. Captures are
+  // written compactly — a bare id when it used the default edge, or
+  // { id, relationship } when overridden — via `serializeCaptures`.
+  function executedSpecJson(linkedNow: string[]): string {
+    const linkedSet = linkedNow.length ? new Set(linkedNow) : null
+    const executedRows = rows.filter((r) =>
+      linkedSet ? linkedSet.has(r.note.id) : r.selected,
+    )
+    const captures: SpecCapture[] = executedRows.map((r) => ({
+      id: r.note.id,
+      relationship: r.relationship,
+    }))
+    const persisted = {
       ...spec,
       entity: { ...spec.entity, path: effectivePath },
       links: {
         ...spec.links,
-        relationship: effectiveRel,
-        captures: linkedNow.length ? linkedNow : rows.filter((r) => r.selected).map((r) => r.note.id),
+        relationship: defaultRel,
+        captures: serializeCaptures(captures, defaultRel),
       },
     }
+    return JSON.stringify(persisted)
   }
 
   // ── Primary Accept: create (maybe) + link + persist edited spec + RESOLVE ──
@@ -334,7 +413,7 @@ export function ProposalCard({
     try {
       const { summary: msg, linked } = await doCreateAndLink()
       setProgress('Resolving proposal…')
-      await resolveProposalWithSpec(proposal.id, JSON.stringify(executedSpec(linked)), 'approved')
+      await resolveProposalWithSpec(proposal.id, executedSpecJson(linked), 'approved')
       onResolved(proposal.id, `${msg} 🌿`)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -702,20 +781,23 @@ export function ProposalCard({
         </div>
       )}
 
-      {/* ── Relationship (which edge the captures get) ── */}
+      {/* ── Default relationship (each capture can override its own below) ── */}
       <div className="pc-rel">
-        <span className="pc-rel-label">Relationship</span>
+        <span className="pc-rel-label">Default relationship</span>
         <div className="rel-row">
           {RELATIONSHIPS.map((r) => (
             <button
               key={r}
-              className={`rel-pick ${effectiveRel === r ? 'sel' : ''}`}
+              className={`rel-pick ${defaultRel === r ? 'sel' : ''}`}
               onClick={() => setRelationship(r)}
             >
               {r}
             </button>
           ))}
         </div>
+        <span className="pc-rel-hint">
+          Applies to every linked capture unless you override an individual row.
+        </span>
       </div>
 
       {/* ── Supporting captures (the evidence) ── */}
@@ -768,13 +850,24 @@ export function ProposalCard({
 
         <div className="pc-cap-list">
           {rows.map((r) => (
-            <label key={r.note.id} className={`pc-cap-row ${r.selected ? 'on' : 'off'} ${linkedIds.has(r.note.id) ? 'linked' : ''}`}>
+            <div
+              key={r.note.id}
+              className={`pc-cap-row ${r.selected ? 'on' : 'off'} ${linkedIds.has(r.note.id) ? 'linked' : ''}`}
+            >
+              {/* Selection: its own control, so opening never toggles it. */}
               <input
                 type="checkbox"
                 checked={r.selected}
                 onChange={() => toggleRow(r.note.id)}
+                aria-label={r.selected ? 'Deselect this capture' : 'Select this capture'}
               />
-              <span className="pc-cap-text">
+              {/* Open: reading the full note is a separate affordance (button). */}
+              <button
+                type="button"
+                className="pc-cap-text pc-cap-open"
+                onClick={() => setViewing(r.note)}
+                title="Open the full note"
+              >
                 <CaptureMention
                   note={r.note}
                   content={r.note.content ?? content[r.note.id] ?? null}
@@ -784,11 +877,29 @@ export function ProposalCard({
                   {formatDayHeading(dayKey(r.note.createdAt))}
                   {linkedIds.has(r.note.id) && <span className="pc-cap-linked"> · linked</span>}
                 </span>
-              </span>
-            </label>
+              </button>
+              {/* Per-row relationship override (compact; defaults to the entity
+                  default). Most rows keep the default; change individual ones. */}
+              <select
+                className="pc-cap-rel"
+                value={relForRow(r)}
+                onChange={(e) => setRowRel(r.note.id, e.target.value)}
+                title="Relationship for this capture"
+                aria-label="Relationship for this capture"
+              >
+                {RELATIONSHIPS.map((rel) => (
+                  <option key={rel} value={rel}>
+                    {rel}
+                  </option>
+                ))}
+              </select>
+            </div>
           ))}
         </div>
       </div>
+
+      {/* Capability B: read-only full-note modal for the focused capture. */}
+      {viewing && <CaptureView seed={viewing} onClose={() => setViewing(null)} />}
 
       {progress && <div className="pc-progress">{progress}</div>}
       {error && <div className="config-err" style={{ marginTop: 12 }}>{error}</div>}
