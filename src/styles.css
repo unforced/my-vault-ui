@@ -202,7 +202,14 @@ button { font-family: inherit; cursor: pointer; }
 }
 @media (max-width: 940px) {
   .today-grid { grid-template-columns: 1fr; }
-  .rail { order: -1; }
+  .rail {
+    order: -1;
+    /* stacked layout → normal flow, no fixed-height inner scroll */
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
 }
 
 .page-head { margin-bottom: 26px; }
@@ -360,7 +367,17 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ── Rail ──────────────────────────────────────────── */
 
-.rail { display: flex; flex-direction: column; gap: 22px; position: sticky; top: 84px; }
+.rail {
+  display: flex; flex-direction: column; gap: 22px;
+  position: sticky; top: 84px;
+  /* Own scroll region on desktop: fill the viewport under the header and
+     scroll independently of the main timeline column. */
+  max-height: calc(100vh - 84px - 24px);
+  overflow-y: auto;
+  /* a touch of breathing room so the last card isn't flush to the edge */
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
 
 .touching {
   background: var(--surface);
@@ -471,6 +488,34 @@ button { font-family: inherit; cursor: pointer; }
   position: relative; text-align: center; padding: 18px;
   color: var(--sage); font-family: var(--serif); font-size: 16px;
 }
+
+/* ── Capture triage (full editable view from the tray) ─── */
+
+.panel.triage { max-width: 680px; }
+.panel.triage .panel-body { max-height: calc(92vh - 60px); overflow-y: auto; }
+.triage-meta {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12px; color: var(--ink-faint); margin-bottom: 18px;
+}
+.triage-meta .kind {
+  text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; font-size: 10.5px;
+  color: var(--clay);
+}
+.triage-section { margin-bottom: 24px; }
+.triage-section:last-of-type { margin-bottom: 16px; }
+.triage-textarea {
+  min-height: 200px;
+  font-family: ui-monospace, 'SF Mono', monospace; font-size: 13.5px; line-height: 1.6;
+}
+.triage-danger {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line-soft);
+}
+.triage-danger .td-trigger { color: var(--ink-faint); }
+.triage-danger .td-trigger:hover { color: var(--clay); }
+.triage-danger .td-ask { font-size: 13.5px; color: var(--ink); flex: 1; min-width: 140px; }
+.btn-danger { background: var(--clay); border-color: var(--clay); }
+.btn-danger:hover { background: var(--clay-soft); border-color: var(--clay-soft); }
 
 /* ── Weave editor (modal-ish panel) ───────────────── */
 

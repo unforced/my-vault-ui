@@ -12,7 +12,7 @@ import {
 import { captureKindOf } from '../vault/types'
 import { CaptureCard } from '../components/CaptureCard'
 import { Loading, ErrorBanner, EmptyState, EntityChip, Toast } from '../components/common'
-import { WeaveEditor } from '../components/WeaveEditor'
+import { CaptureTriage } from '../components/CaptureTriage'
 import {
   groupByDay,
   formatDayHeading,
@@ -30,9 +30,9 @@ const WEAVE_LIMIT = 12
 
 export function Today() {
   const [showDormant, setShowDormant] = useState(false)
-  const [weaving, setWeaving] = useState<Note | null>(null)
+  const [triaging, setTriaging] = useState<Note | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-  const [wovenIds, setWovenIds] = useState<Set<string>>(new Set())
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
 
   // Recent captures with links + content (for the spine + "touching today").
   const captures = useAsync(
@@ -121,16 +121,27 @@ export function Today() {
   }, [entities.data])
 
   const trayItems = useMemo(
-    () => (unwoven.data ?? []).filter((c) => !wovenIds.has(c.id)),
-    [unwoven.data, wovenIds],
+    () => (unwoven.data ?? []).filter((c) => !removedIds.has(c.id)),
+    [unwoven.data, removedIds],
   )
 
-  function onWoven(updated: Note) {
-    setWovenIds((s) => new Set(s).add(updated.id))
-    setWeaving(null)
-    setToast('Woven into the graph 🌿')
+  function flash(msg: string) {
+    setToast(msg)
     setTimeout(() => setToast(null), 2200)
+  }
+
+  // Save/weave: refresh the tray + timeline so woven/edited notes drop or update.
+  function onTriageChanged() {
     captures.reload()
+    unwoven.reload()
+  }
+
+  // Delete: pull from the tray immediately, then refresh everything.
+  function onTriageDeleted(id: string) {
+    setRemovedIds((s) => new Set(s).add(id))
+    flash('Deleted 🍂')
+    captures.reload()
+    unwoven.reload()
   }
 
   return (
@@ -191,7 +202,7 @@ export function Today() {
               {trayItems.map((c) => {
                 const kind = captureKindOf(c)
                 return (
-                  <button key={c.id} className="weave-item" onClick={() => setWeaving(c)}>
+                  <button key={c.id} className="weave-item" onClick={() => setTriaging(c)}>
                     <span className="wi-glyph">{captureGlyph(kind)}</span>
                     <span className="wi-text">
                       <div className="wi-preview">{previewText(c, 200) || '(no text)'}</div>
@@ -288,8 +299,13 @@ export function Today() {
         </aside>
       </div>
 
-      {weaving && (
-        <WeaveEditor capture={weaving} onClose={() => setWeaving(null)} onWoven={onWoven} />
+      {triaging && (
+        <CaptureTriage
+          seed={triaging}
+          onClose={() => setTriaging(null)}
+          onChanged={onTriageChanged}
+          onDeleted={onTriageDeleted}
+        />
       )}
       {toast && <Toast message={toast} />}
     </div>
