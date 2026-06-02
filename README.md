@@ -34,27 +34,45 @@ against your local vault or your Tailscale URL, whichever you paste in.
 - Warm / light by default; a dark toggle is in the top bar. Theme + connection are
   remembered in `localStorage`.
 
-## Connecting (the one-time paste-in)
+## Connecting (sign in — no token to copy)
 
-On first run you'll see a **Connect** screen. Paste two things:
+On first run you'll see a **Connect** screen. The primary path is a one-tap
+sign-in — the same OAuth 2.1 + PKCE + Dynamic Client Registration flow
+Parachute Notes uses:
 
-1. **Vault origin** — the base URL of your vault, e.g.
+1. **Enter your vault URL**, e.g.
    - local: `http://127.0.0.1:1940/vault/default`
    - Tailscale: `https://parachute.taildf9ce2.ts.net/vault/default`
-2. **A token** — mint one with:
-   ```bash
-   parachute auth mint-token --scope vault:default:write --ephemeral
-   ```
-   (`:write` is needed for the weave/create features; use `:read` for read-only.)
+2. Click **Sign in**. The app discovers your hub's OAuth endpoints
+   (`/.well-known/oauth-authorization-server`), registers itself as a public
+   PKCE client, and redirects you to your hub to log in.
+3. Log in at your hub (your existing hub session usually auto-approves the app).
+   You land back on `/oauth/callback`, the app exchanges the code for a token,
+   and you're in.
 
-These are stored only in your browser's `localStorage` and sent as
-`Authorization: Bearer <token>` on every request. Nothing is hardcoded in the
-source. There's a **change vault / sign out** button in the top-right that clears
-them. Tokens are short-lived; if requests start failing with an auth error,
-re-mint and re-paste.
+No token to mint or paste. The access token (and a refresh token) are stored
+only in your browser's `localStorage` and sent as `Authorization: Bearer <token>`
+on every request; an expired access token is silently refreshed. The
+**sign out** button in the top-right clears everything.
 
-> The vault sends `Access-Control-Allow-Origin: *`, so the static site can call it
-> cross-origin from GitHub Pages.
+### Paste a token instead (advanced)
+
+Under the Sign in button there's a **Paste a token instead** option — the
+original flow. Mint a token with:
+
+```bash
+parachute auth mint-token --scope vault:default:write --ephemeral
+```
+
+(`:write` is needed for the weave/create features; use `:read` for read-only.)
+Pasted tokens aren't refreshed — re-mint and re-paste when they expire.
+
+> CORS: the vault sends `Access-Control-Allow-Origin: *` for data calls, and the
+> hub's `/oauth/register` + `/oauth/token` reflect the GitHub Pages origin with
+> `Access-Control-Allow-Credentials: true`, so the whole flow works cross-origin
+> from GitHub Pages. The OAuth callback route is preserved across the Pages SPA
+> fallback (`public/404.html` stashes the full URL + query, `main.tsx` restores
+> it before React Router parses `/oauth/callback`).
 
 ## Run locally
 

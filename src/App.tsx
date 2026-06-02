@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { clearConfig, hasConfig } from './vault/config'
+import { clearConfig, hasConfig, isOAuth } from './vault/config'
 import { EntityIndexProvider } from './vault/EntityIndex'
 import { useTheme } from './components/useTheme'
 import { SearchPalette } from './components/SearchPalette'
@@ -38,7 +38,10 @@ function Shell() {
   useEffect(() => setSearch(false), [loc.pathname])
 
   function signOut() {
-    if (confirm('Disconnect this vault? You can paste a new origin + token after.')) {
+    const msg = isOAuth()
+      ? 'Sign out of this vault? Your stored token will be cleared from this browser.'
+      : 'Disconnect this vault? You can sign in to a new vault after.'
+    if (confirm(msg)) {
       clearConfig()
       nav('/connect')
     }

@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './styles.css'
 import { RequireConfig } from './App'
 import { Config } from './routes/Config'
+import { OAuthCallback } from './routes/OAuthCallback'
 import { Today } from './routes/Today'
 import { Browse } from './routes/Browse'
 import { EntityDetail } from './routes/EntityDetail'
@@ -24,6 +25,7 @@ if (redirect) {
 const router = createBrowserRouter(
   [
     { path: '/connect', element: <Config /> },
+    { path: '/oauth/callback', element: <OAuthCallback /> },
     {
       path: '/',
       element: <RequireConfig />,

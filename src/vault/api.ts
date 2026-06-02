@@ -1,7 +1,8 @@
 // Thin client over the Parachute Vault REST API.
 // base = <origin>/api ; Authorization: Bearer <token> on every request.
 
-import { getConfig } from './config'
+import { getAuth, getConfig, isOAuth, updateAccessToken } from './config'
+import { refreshAccessToken } from './oauth'
 import type { Note, NoteMetadata, TagRecord } from './types'
 
 export class VaultError extends Error {
@@ -19,23 +20,66 @@ function requireConfig() {
   return cfg
 }
 
+// When signed in via OAuth, swap an expiring/rejected access token for a fresh
+// one using the stored refresh token. Returns the new access token, or null if
+// there's nothing to refresh (pasted token, or no refresh_token). The hub
+// rotates the refresh token, so we persist whatever comes back.
+let refreshInflight: Promise<string | null> | null = null
+
+async function tryRefresh(): Promise<string | null> {
+  if (refreshInflight) return refreshInflight
+  refreshInflight = (async () => {
+    const auth = getAuth()
+    if (!auth || !auth.refreshToken) return null
+    try {
+      const token = await refreshAccessToken({
+        tokenEndpoint: auth.tokenEndpoint,
+        clientId: auth.clientId,
+        refreshToken: auth.refreshToken,
+      })
+      updateAccessToken(token.access_token, {
+        refreshToken: token.refresh_token ?? auth.refreshToken,
+        expiresAt: token.expires_in ? Date.now() + token.expires_in * 1000 : undefined,
+        scope: token.scope ?? auth.scope,
+      })
+      return token.access_token
+    } catch {
+      return null
+    }
+  })()
+  try {
+    return await refreshInflight
+  } finally {
+    refreshInflight = null
+  }
+}
+
+function doFetch(
+  origin: string,
+  path: string,
+  method: string,
+  token: string,
+  body?: unknown,
+): Promise<Response> {
+  return fetch(`${origin}/api${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
 ): Promise<T> {
   const { origin, token } = requireConfig()
-  const url = `${origin}/api${path}`
   let res: Response
   try {
-    res = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    })
+    res = await doFetch(origin, path, method, token, body)
   } catch (e) {
     throw new VaultError(
       0,
@@ -43,6 +87,20 @@ async function request<T>(
         e instanceof Error ? e.message : String(e)
       })`,
     )
+  }
+  // OAuth: an expired access token surfaces as 401. Refresh once and retry.
+  if (res.status === 401 && isOAuth()) {
+    const fresh = await tryRefresh()
+    if (fresh) {
+      try {
+        res = await doFetch(origin, path, method, fresh, body)
+      } catch (e) {
+        throw new VaultError(
+          0,
+          `Could not reach the vault at ${origin}. (${e instanceof Error ? e.message : String(e)})`,
+        )
+      }
+    }
   }
   if (!res.ok) {
     let detail = res.statusText
@@ -53,7 +111,10 @@ async function request<T>(
       /* ignore */
     }
     if (res.status === 401 || res.status === 403) {
-      throw new VaultError(res.status, `Auth failed (${res.status}). Your token may be expired — re-paste it.`)
+      const hint = isOAuth()
+        ? 'Your session expired — sign in again.'
+        : 'Your token may be expired — re-paste it.'
+      throw new VaultError(res.status, `Auth failed (${res.status}). ${hint}`)
     }
     throw new VaultError(res.status, `${res.status} ${detail}`)
   }
