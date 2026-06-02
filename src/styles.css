@@ -768,3 +768,93 @@ button { font-family: inherit; cursor: pointer; }
 
 .skel { background: linear-gradient(90deg, var(--surface-2), var(--line-soft), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--r-sm); }
 @keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── Capture: transcript ───────────────────────────── */
+.transcript {
+  background: var(--surface-2);
+  border-left: 3px solid var(--sage-soft);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  padding: 12px 16px; margin: 4px 0 18px;
+  color: var(--ink); font-size: 14.5px; line-height: 1.6;
+  white-space: pre-wrap;
+}
+.transcript-pending {
+  color: var(--ink-faint); font-style: italic; font-size: 13.5px;
+  margin: 4px 0 18px;
+}
+
+/* ── Capture: topbar trigger ───────────────────────── */
+.capture-trigger {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: var(--r-pill);
+  border: 1px solid var(--clay); background: var(--clay); color: #fff;
+  font-weight: 600; font-size: 13.5px; margin-right: 10px;
+  transition: all 0.16s ease;
+}
+.capture-trigger:hover { background: var(--clay-soft); border-color: var(--clay-soft); }
+.capture-trigger svg { width: 15px; height: 15px; }
+
+/* ── Capture: Today affordance card ────────────────── */
+.new-capture-card {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  padding: 16px 18px; margin-bottom: 24px;
+  border: 1px dashed var(--clay-soft); border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--clay) 6%, var(--surface));
+  transition: all 0.16s ease;
+}
+.new-capture-card:hover {
+  border-color: var(--clay); background: color-mix(in srgb, var(--clay) 10%, var(--surface));
+  transform: translateY(-1px); box-shadow: var(--shadow-soft);
+}
+.new-capture-card .ncc-glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: var(--clay); color: #fff;
+}
+.new-capture-card .ncc-glyph svg { width: 18px; height: 18px; }
+.new-capture-card .ncc-text { display: flex; flex-direction: column; gap: 2px; }
+.new-capture-card .ncc-title { font-family: var(--serif); font-weight: 600; font-size: 16px; color: var(--ink); }
+.new-capture-card .ncc-sub { font-size: 13px; color: var(--ink-soft); }
+
+/* ── Capture: modal mode picker ────────────────────── */
+.capture-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.capture-mode {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-2); text-align: left; transition: all 0.16s ease;
+}
+.capture-mode:hover {
+  border-color: var(--clay-soft); background: var(--surface);
+  transform: translateY(-2px); box-shadow: var(--shadow-soft);
+}
+.capture-mode .cm-glyph { color: var(--clay); margin-bottom: 4px; }
+.capture-mode .cm-glyph svg { width: 22px; height: 22px; }
+.capture-mode .cm-label { font-family: var(--serif); font-weight: 600; font-size: 16px; color: var(--ink); }
+.capture-mode .cm-sub { font-size: 12.5px; color: var(--ink-soft); line-height: 1.4; }
+
+/* ── Capture: text mode ────────────────────────────── */
+.capture-textarea {
+  width: 100%; min-height: 160px; resize: vertical;
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-2); color: var(--ink);
+  font-family: inherit; font-size: 15px; line-height: 1.6;
+}
+.capture-textarea:focus { outline: none; border-color: var(--clay-soft); background: var(--surface); }
+
+/* ── Capture: voice mode ───────────────────────────── */
+.voice-stage { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px 0; }
+.voice-hint { color: var(--ink-soft); font-size: 14px; line-height: 1.6; margin: 10px 0 4px; max-width: 380px; }
+.voice-stage .btn-row { width: 100%; }
+.rec-pulse {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--clay); margin: 8px 0 2px;
+  animation: recpulse 1.4s ease-in-out infinite;
+}
+@keyframes recpulse {
+  0%, 100% { transform: scale(0.85); box-shadow: 0 0 0 0 color-mix(in srgb, var(--clay) 40%, transparent); }
+  50% { transform: scale(1); box-shadow: 0 0 0 14px color-mix(in srgb, var(--clay) 0%, transparent); }
+}
+.rec-elapsed {
+  font-family: var(--serif); font-size: 28px; font-weight: 600;
+  color: var(--ink); font-variant-numeric: tabular-nums; margin: 6px 0 0;
+}

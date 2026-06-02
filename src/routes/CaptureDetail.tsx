@@ -9,14 +9,22 @@ import { AudioEmbed } from '../components/AudioEmbed'
 import { WeaveEditor } from '../components/WeaveEditor'
 import { Loading, ErrorBanner, EntityChip, Toast } from '../components/common'
 import { BackIcon, captureGlyph, LinkIcon } from '../components/icons'
-import { findAudioEmbed, linkedEntities, formatDayHeading, dayKey, formatTime } from '../vault/util'
+import {
+  findAudioEmbed,
+  audioAttachmentOf,
+  transcriptOf,
+  linkedEntities,
+  formatDayHeading,
+  dayKey,
+  formatTime,
+} from '../vault/util'
 
 export function CaptureDetail() {
   const { id = '' } = useParams()
   const [weaving, setWeaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const { data, loading, error, reload } = useAsync(
-    () => getNote(decodeURIComponent(id), { includeLinks: true }),
+    () => getNote(decodeURIComponent(id), { includeLinks: true, includeAttachments: true }),
     [id],
   )
 
@@ -48,8 +56,27 @@ export function CaptureDetail() {
           </div>
 
           {(() => {
-            const audio = data.content ? findAudioEmbed(data.content) : null
-            return audio ? <AudioEmbed file={audio} /> : null
+            const embed = data.content ? findAudioEmbed(data.content) : null
+            const att = audioAttachmentOf(data.attachments)
+            // Render a player whenever there's an audio attachment OR an embed
+            // (a fresh voice capture mid-transcription may have one but not yet
+            // the other). Skip only when there's nothing audio at all.
+            if (!att && !embed) return null
+            const transcript = transcriptOf(att)
+            const transcribeStatus = att?.metadata?.transcribe_status
+            const pending =
+              !transcript &&
+              (transcribeStatus === 'pending' || transcribeStatus === 'processing')
+            return (
+              <>
+                <AudioEmbed attachment={att} file={embed ?? undefined} />
+                {transcript ? (
+                  <blockquote className="transcript">{transcript}</blockquote>
+                ) : pending ? (
+                  <p className="transcript-pending">Transcribing…</p>
+                ) : null}
+              </>
+            )
           })()}
 
           {data.content ? (

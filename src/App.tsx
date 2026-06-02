@@ -4,7 +4,22 @@ import { clearConfig, hasConfig, isOAuth } from './vault/config'
 import { EntityIndexProvider } from './vault/EntityIndex'
 import { useTheme } from './components/useTheme'
 import { SearchPalette } from './components/SearchPalette'
-import { Seed, SearchIcon, SunIcon, MoonIcon } from './components/icons'
+import { Capture } from './components/Capture'
+import { WeaveEditor } from './components/WeaveEditor'
+import { Toast } from './components/common'
+import type { Note } from './vault/types'
+import { Seed, SearchIcon, SunIcon, MoonIcon, PlusIcon } from './components/icons'
+
+// Broadcast so the active route (e.g. Today) can refresh after a capture lands,
+// without threading a callback through the router.
+export const CAPTURE_CREATED_EVENT = 'pv:capture-created'
+// Routes fire this to open the global capture modal hosted in the shell.
+export const OPEN_CAPTURE_EVENT = 'pv:open-capture'
+
+// Helper for routes to request the capture modal.
+export function openCapture() {
+  window.dispatchEvent(new CustomEvent(OPEN_CAPTURE_EVENT))
+}
 
 // Guard: require a configured vault, else send to the config screen.
 export function RequireConfig() {
@@ -19,8 +34,25 @@ export function RequireConfig() {
 function Shell() {
   const { theme, toggle } = useTheme()
   const [search, setSearch] = useState(false)
+  const [capturing, setCapturing] = useState(false)
+  // After a capture lands, offer to weave it (links) right away.
+  const [weaveNew, setWeaveNew] = useState<Note | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   const nav = useNavigate()
   const loc = useLocation()
+
+  function flash(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2400)
+  }
+
+  function onCaptured(note: Note) {
+    setCapturing(false)
+    // Let any listening route refresh so the capture appears.
+    window.dispatchEvent(new CustomEvent(CAPTURE_CREATED_EVENT, { detail: note }))
+    // Offer to weave it immediately.
+    setWeaveNew(note)
+  }
 
   // ⌘K / Ctrl-K opens search
   useEffect(() => {
@@ -36,6 +68,13 @@ function Shell() {
 
   // close search on navigation
   useEffect(() => setSearch(false), [loc.pathname])
+
+  // Routes (e.g. Today's affordance) can open the capture modal via an event.
+  useEffect(() => {
+    const onOpen = () => setCapturing(true)
+    window.addEventListener(OPEN_CAPTURE_EVENT, onOpen)
+    return () => window.removeEventListener(OPEN_CAPTURE_EVENT, onOpen)
+  }, [])
 
   function signOut() {
     const msg = isOAuth()
@@ -60,6 +99,10 @@ function Shell() {
             <NavLink to="/browse">Browse</NavLink>
           </nav>
           <div className="topbar-spacer" />
+          <button className="capture-trigger" onClick={() => setCapturing(true)} title="New capture">
+            <PlusIcon />
+            <span>New capture</span>
+          </button>
           <button className="search-trigger" onClick={() => setSearch(true)}>
             <SearchIcon />
             <span>Search</span>
@@ -81,6 +124,21 @@ function Shell() {
       </main>
 
       {search && <SearchPalette onClose={() => setSearch(false)} />}
+      {capturing && <Capture onClose={() => setCapturing(false)} onCreated={onCaptured} />}
+      {weaveNew && (
+        <WeaveEditor
+          capture={weaveNew}
+          onClose={() => {
+            setWeaveNew(null)
+            flash('Captured 🌱')
+          }}
+          onWoven={() => {
+            setWeaveNew(null)
+            flash('Woven into the graph 🌿')
+          }}
+        />
+      )}
+      {toast && <Toast message={toast} />}
     </div>
   )
 }

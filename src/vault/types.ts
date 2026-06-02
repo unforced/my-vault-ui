@@ -41,6 +41,7 @@ export interface Note {
   createdAt: string
   updatedAt: string
   links?: VaultLink[]
+  attachments?: import('./api').Attachment[]
   byteSize?: number
 }
 

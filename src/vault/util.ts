@@ -1,4 +1,5 @@
 import type { Note, NoteRef } from './types'
+import type { Attachment } from './api'
 import { entityTypeOf } from './types'
 
 // ---- Dates ----
@@ -71,6 +72,42 @@ export function groupByDay<T extends { createdAt: string }>(
     .map(([key, its]) => ({ key, items: its }))
 }
 
+// ---- Capture paths ----
+
+// Path roots for NEW captures, matching the Parachute Notes app convention
+// (packages/notes-ui recorder.ts): text → Notes/, voice → Memos/. Kept as
+// one-line constants so the scheme is trivial to adjust.
+export const NOTES_PREFIX = 'Notes'
+export const MEMOS_PREFIX = 'Memos'
+
+// Build `${prefix}/YYYY/MM-DD/HH-MM-SS` from a moment in time.
+export function capturePath(
+  kind: 'text' | 'voice',
+  at: Date = new Date(),
+): string {
+  const prefix = kind === 'voice' ? MEMOS_PREFIX : NOTES_PREFIX
+  const yyyy = at.getFullYear()
+  const mm = String(at.getMonth() + 1).padStart(2, '0')
+  const dd = String(at.getDate()).padStart(2, '0')
+  const hh = String(at.getHours()).padStart(2, '0')
+  const mi = String(at.getMinutes()).padStart(2, '0')
+  const ss = String(at.getSeconds()).padStart(2, '0')
+  return `${prefix}/${yyyy}/${mm}-${dd}/${hh}-${mi}-${ss}`
+}
+
+// Filename for a voice memo blob (used in the ![[...]] embed + as the File name).
+export function memoFilename(mimeType: string, at: Date = new Date()): string {
+  const ext = mimeType.startsWith('audio/webm')
+    ? 'webm'
+    : mimeType.startsWith('audio/mp4')
+      ? 'm4a'
+      : mimeType.startsWith('audio/ogg')
+        ? 'ogg'
+        : 'bin'
+  const stamp = at.toISOString().replace(/[:.]/g, '-').replace(/Z$/, '')
+  return `memo-${stamp}.${ext}`
+}
+
 // ---- Content / preview ----
 
 const EMBED_RE = /!\[\[([^\]]+?)\]\]/g
@@ -87,6 +124,25 @@ export function findAudioEmbed(content: string): string | null {
     if (/\.(webm|ogg|m4a|mp3|wav)$/i.test(name)) return name
   }
   return null
+}
+
+// The voice attachment on a note (audio mimeType, or audio file extension).
+// A voice note typically has exactly one; we return the first audio match.
+export function audioAttachmentOf(
+  attachments: Attachment[] | undefined | null,
+): Attachment | null {
+  if (!attachments) return null
+  for (const a of attachments) {
+    if (a.mimeType?.startsWith('audio/')) return a
+    if (a.path && /\.(webm|ogg|m4a|mp3|wav)$/i.test(a.path)) return a
+  }
+  return null
+}
+
+// Pull a transcript out of an attachment's metadata, if present.
+export function transcriptOf(att: Attachment | null | undefined): string | null {
+  const t = att?.metadata?.transcript
+  return typeof t === 'string' && t.trim() ? t : null
 }
 
 export function previewText(note: Note, max = 220): string {

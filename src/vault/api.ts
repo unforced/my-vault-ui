@@ -159,12 +159,15 @@ export function listNotes(q: NotesQuery = {}): Promise<Note[]> {
 
 export function getNote(
   idOrPath: string,
-  opts: { includeLinks?: boolean } = {},
+  opts: { includeLinks?: boolean; includeAttachments?: boolean } = {},
 ): Promise<Note> {
   // Paths contain slashes — encode the whole segment.
   const enc = encodeURIComponent(idOrPath)
-  const qs = opts.includeLinks ? '?include_links=true' : ''
-  return request<Note>('GET', `/notes/${enc}${qs}`)
+  const p = new URLSearchParams()
+  if (opts.includeLinks) p.set('include_links', 'true')
+  if (opts.includeAttachments) p.set('include_attachments', 'true')
+  const qs = p.toString()
+  return request<Note>('GET', `/notes/${enc}${qs ? `?${qs}` : ''}`)
 }
 
 export interface LinkAdd {
@@ -200,6 +203,102 @@ export function createNote(note: CreateNote): Promise<Note> {
 
 export function deleteNote(id: string): Promise<void> {
   return request<void>('DELETE', `/notes/${encodeURIComponent(id)}`)
+}
+
+// ---- Attachments & storage ----
+
+// An attachment row as returned by GET /api/notes/{id}?include_attachments=true
+// and POST /api/notes/{id}/attachments.
+export interface Attachment {
+  id: string
+  noteId?: string
+  path: string
+  mimeType?: string
+  url?: string
+  size?: number
+  createdAt?: string
+  metadata?: Record<string, unknown>
+}
+
+// Result of POST /api/storage/upload (confirmed live: {path,size,mimeType}).
+export interface StorageUploadResult {
+  path: string
+  size: number
+  mimeType: string
+}
+
+// Run a non-JSON request (blob GET / multipart POST) with the same
+// auth + OAuth-refresh-on-401 contract as `request`. `build` is given a
+// token and returns the fetch args so we can re-run it with a fresh token.
+async function authedFetch(
+  build: (origin: string, token: string) => [string, RequestInit],
+): Promise<Response> {
+  const { origin, token } = requireConfig()
+  const run = async (tok: string) => {
+    const [url, init] = build(origin, tok)
+    return fetch(url, init)
+  }
+  let res: Response
+  try {
+    res = await run(token)
+  } catch (e) {
+    throw new VaultError(
+      0,
+      `Could not reach the vault at ${origin}. (${e instanceof Error ? e.message : String(e)})`,
+    )
+  }
+  if (res.status === 401 && isOAuth()) {
+    const fresh = await tryRefresh()
+    if (fresh) res = await run(fresh)
+  }
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      const hint = isOAuth()
+        ? 'Your session expired — sign in again.'
+        : 'Your token may be expired — re-paste it.'
+      throw new VaultError(res.status, `Auth failed (${res.status}). ${hint}`)
+    }
+    throw new VaultError(res.status, `${res.status} ${res.statusText}`)
+  }
+  return res
+}
+
+// Fetch a stored file (e.g. a voice memo) as a Blob, WITH the bearer header.
+// A bare <audio src> can't carry the header, so callers turn this into an
+// object URL. `path` is the attachment's storage path (no leading slash).
+export async function fetchStorageBlob(path: string): Promise<Blob> {
+  const clean = path.replace(/^\/+/, '')
+  const res = await authedFetch((origin, token) => [
+    `${origin}/api/storage/${clean}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  ])
+  return res.blob()
+}
+
+// Upload a file to vault storage. Confirmed live: multipart field name is
+// `file`; the result is { path, size, mimeType }.
+export async function uploadStorageFile(file: File): Promise<StorageUploadResult> {
+  const res = await authedFetch((origin, token) => {
+    const form = new FormData()
+    form.append('file', file)
+    return [
+      `${origin}/api/storage/upload`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form },
+    ]
+  })
+  return (await res.json()) as StorageUploadResult
+}
+
+// Attach an uploaded file to a note (+ optionally kick off transcription).
+export function addAttachment(
+  noteId: string,
+  body: { path: string; mimeType: string; transcribe?: boolean },
+): Promise<Attachment> {
+  return request<Attachment>(
+    'POST',
+    `/notes/${encodeURIComponent(noteId)}/attachments`,
+    body,
+  )
 }
 
 // ---- Tags ----

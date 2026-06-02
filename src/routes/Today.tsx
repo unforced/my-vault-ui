@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listNotes } from '../vault/api'
+import { CAPTURE_CREATED_EVENT, openCapture } from '../App'
+import { PlusIcon } from '../components/icons'
 import type { Note } from '../vault/types'
 import { entityTypeOf } from '../vault/types'
 import { useAsync } from '../vault/useAsync'
@@ -63,6 +65,18 @@ export function Today() {
       }),
     [],
   )
+
+  // Refresh the spine + to-weave tray when a capture lands anywhere in the app.
+  useEffect(() => {
+    const onCreated = () => {
+      captures.reload()
+      unwoven.reload()
+    }
+    window.addEventListener(CAPTURE_CREATED_EVENT, onCreated)
+    return () => window.removeEventListener(CAPTURE_CREATED_EVENT, onCreated)
+    // reload fns are stable from useAsync; intentionally run once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const days = useMemo(
     () => (captures.data ? groupByDay(captures.data) : []),
@@ -130,6 +144,14 @@ export function Today() {
       <div className="today-grid">
         {/* ── Main column: timeline spine ── */}
         <div>
+          <button className="new-capture-card" onClick={openCapture}>
+            <span className="ncc-glyph"><PlusIcon /></span>
+            <span className="ncc-text">
+              <span className="ncc-title">New capture</span>
+              <span className="ncc-sub">Drop a thought or record a voice memo</span>
+            </span>
+          </button>
+
           {captures.loading && <Loading label="Reading your recent captures…" />}
           {Boolean(captures.error) && <ErrorBanner error={captures.error} onRetry={captures.reload} />}
           {captures.data && days.length === 0 && (
