@@ -1458,3 +1458,62 @@ button { font-family: inherit; cursor: pointer; }
 .update-dismiss:hover { color: var(--ink); }
 
 @keyframes breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* ── This morning card (Today) ── */
+.morning-card {
+  background: linear-gradient(180deg, var(--cream-2), var(--surface));
+  border: 1px solid var(--clay-soft);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 18px rgba(192, 107, 74, 0.07);
+}
+.morning-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.morning-glyph { display: inline-flex; color: var(--clay); }
+.morning-head h2 { font-family: Fraunces, serif; font-size: 18px; margin: 0; color: var(--ink); }
+.morning-all { margin-left: auto; font-size: 12.5px; color: var(--clay); text-decoration: none; }
+.morning-all:hover { text-decoration: underline; }
+.morning-questions { font-size: 14.5px; line-height: 1.6; color: var(--ink); }
+.morning-questions .markdown p { margin: 7px 0; }
+.morning-quiet { color: var(--ink-soft); font-size: 14px; font-style: italic; }
+.morning-foot { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.morning-respond {
+  background: var(--clay); color: #fff; border: none; border-radius: 9px;
+  padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.morning-respond:hover { background: var(--clay-soft); }
+.morning-now { font-size: 13px; color: var(--ink-soft); text-decoration: none; }
+.morning-now:hover { color: var(--clay); }
+
+/* ── Generic note view (/note/:id) ── */
+.note-wrap { max-width: 760px; margin: 0 auto; padding: 8px 0 60px; }
+.note-head { margin: 14px 0 18px; }
+.note-head h1 { font-family: Fraunces, serif; font-size: 30px; margin: 0 0 8px; color: var(--ink); }
+.note-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-faint); }
+.note-path { font-family: ui-monospace, monospace; color: var(--ink-faint); }
+.note-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.note-tag {
+  background: var(--surface-2, var(--cream-2)); border: 1px solid var(--line, rgba(0,0,0,0.07));
+  border-radius: 999px; padding: 1px 8px; color: var(--ink-soft);
+}
+.note-body { font-size: 15.5px; line-height: 1.68; color: var(--ink); }
+.note-links { margin-top: 32px; border-top: 1px solid var(--line, rgba(0,0,0,0.08)); padding-top: 18px; }
+.note-links-group { margin-bottom: 16px; }
+.note-links-group h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-faint); margin: 0 0 8px; }
+.link-chip {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0 6px 6px 0;
+  background: var(--surface-2, var(--cream-2)); border: 1px solid var(--line, rgba(0,0,0,0.08));
+  border-radius: 999px; padding: 3px 11px; font-size: 13px; color: var(--ink); text-decoration: none;
+}
+.link-chip:hover { border-color: var(--clay-soft); }
+.lc-rel { font-size: 11px; color: var(--ink-faint); }
+
+/* wikilink to a non-entity note — same look, subtler underline */
+.wikilink.other { border-bottom-style: dotted; }
+
+/* Browse "More" divider + non-entity card tint */
+.browse-more-rule {
+  margin: 30px 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-faint); border-top: 1px solid var(--line, rgba(0,0,0,0.08)); padding-top: 18px;
+}
+.entity-card.t-other { border-left: 3px solid var(--sage-soft); }

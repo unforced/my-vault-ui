@@ -12,6 +12,7 @@ import { Proposals } from './routes/Proposals'
 import { Browse } from './routes/Browse'
 import { EntityDetail } from './routes/EntityDetail'
 import { CaptureDetail } from './routes/CaptureDetail'
+import { NoteView } from './routes/NoteView'
 
 // `base` from vite.config.ts also drives the router basename for GH Pages.
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -40,6 +41,7 @@ const router = createBrowserRouter(
         { path: 'browse', element: <Browse /> },
         { path: 'entity/:path', element: <EntityDetail /> },
         { path: 'capture/:id', element: <CaptureDetail /> },
+        { path: 'note/:id', element: <NoteView /> },
       ],
     },
   ],

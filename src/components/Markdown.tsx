@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Link } from 'react-router-dom'
 import { useEntityIndex } from '../vault/EntityIndex'
-import { captureHref, entityHref } from '../vault/util'
+import { captureHref, noteHref, genericNoteHref } from '../vault/util'
 
 // Render markdown content, turning [[wikilinks]] into in-app navigable links
 // and stripping ![[audio]] embeds (handled separately by AudioEmbed).
@@ -25,16 +25,17 @@ function WikiText({ text }: { text: string }) {
         const hit = resolve(target)
         if (hit) {
           return (
-            <Link key={i} to={entityHref(hit)} className="wikilink">
+            <Link key={i} to={noteHref(hit)} className="wikilink">
               {label}
             </Link>
           )
         }
-        // unresolved — render as a soft non-link (still readable)
+        // Not an entity — still link it to the generic note view (it may be a
+        // tending/job/feedback note like [[Now]]). NoteView handles a miss.
         return (
-          <span key={i} className="wikilink-dead" title="No matching note">
+          <Link key={i} to={genericNoteHref(path)} className="wikilink other">
             {label}
-          </span>
+          </Link>
         )
       })}
     </>

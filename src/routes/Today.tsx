@@ -8,6 +8,7 @@ import type { Note } from '../vault/types'
 import { pendingCaptures, onOutboxChange } from '../vault/sync/outbox'
 import { useAsync } from '../vault/useAsync'
 import { CaptureCard } from '../components/CaptureCard'
+import { MorningCard } from '../components/MorningCard'
 import { Loading, ErrorBanner, EmptyState, EntityChip } from '../components/common'
 import {
   groupByDay,
@@ -122,6 +123,7 @@ export function Today() {
       <div className="today-grid">
         {/* ── Main column: timeline spine ── */}
         <div>
+          <MorningCard />
           <button className="new-capture-card" onClick={openCapture}>
             <span className="ncc-glyph"><PlusIcon /></span>
             <span className="ncc-text">

@@ -1,6 +1,6 @@
 import type { Note, NoteRef, EntityType } from './types'
 import type { Attachment } from './api'
-import { entityTypeOf } from './types'
+import { entityTypeOf, isCapture } from './types'
 
 // ---- Dates ----
 
@@ -417,8 +417,17 @@ export function captureHref(ref: NoteRef | Note): string {
   return `/capture/${encodeURIComponent(ref.id)}`
 }
 
-// Pick the right route for any note ref (entity vs capture vs other).
+// Pick the right route for any note ref: entity → /entity, capture → /capture,
+// everything else (Now, Open Inquiry, Jobs/*, Feedback/*, …) → the generic
+// /note view. The fallback keys off `path` (so getNote can resolve it by path).
 export function noteHref(ref: NoteRef | Note): string {
   if (entityTypeOf(ref)) return entityHref(ref)
-  return captureHref(ref)
+  if (isCapture(ref)) return captureHref(ref)
+  return `/note/${encodeURIComponent(ref.path ?? ref.id)}`
+}
+
+// A wikilink target ("Now", "Projects/scenius.social") → the generic note view.
+// Used when the entity index can't resolve it but it may still be a real note.
+export function genericNoteHref(target: string): string {
+  return `/note/${encodeURIComponent(target.trim())}`
 }
