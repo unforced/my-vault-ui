@@ -1574,6 +1574,39 @@ button { font-family: inherit; cursor: pointer; }
 .link-chip:hover { border-color: var(--clay-soft); }
 .lc-rel { font-size: 11px; color: var(--ink-faint); }
 
+/* Note plumbing: copyable path/id + inline edit/delete (any note view). */
+.note-controls { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 16px; }
+.nc-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.nc-field {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--cream-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px 9px; cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px; color: var(--ink-soft); max-width: 100%;
+  transition: border-color .15s;
+}
+.nc-field:hover { border-color: var(--clay-soft); }
+.nc-k { color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; }
+.nc-v { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46ch; }
+.nc-copy { color: var(--ink-faint); font-size: 11px; }
+.nc-actions { display: flex; align-items: center; gap: 8px; }
+.nc-btn {
+  background: transparent; border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 13px; font-size: 13px; color: var(--ink-soft); cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.nc-btn:hover:not(:disabled) { border-color: var(--clay-soft); color: var(--clay); }
+.nc-btn:disabled { opacity: .6; cursor: default; }
+.nc-danger:hover:not(:disabled) { border-color: #c0584a; color: #c0584a; }
+.nc-textarea {
+  width: 100%; box-sizing: border-box;
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; font-size: 14px; line-height: 1.55;
+  font-family: inherit; color: var(--ink); background: var(--surface);
+  resize: vertical;
+}
+.nc-textarea:focus { outline: none; border-color: var(--clay-soft); }
+
 /* wikilink to a non-entity note — same look, subtler underline */
 .wikilink.other { border-bottom-style: dotted; }
 

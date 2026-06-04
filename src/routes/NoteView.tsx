@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { getNote, fetchCapturesByIds } from '../vault/api'
 import type { VaultLink } from '../vault/types'
 import { useAsync } from '../vault/useAsync'
 import { Markdown } from '../components/Markdown'
+import { NoteControls } from '../components/NoteControls'
 import { Loading, ErrorBanner, EmptyState } from '../components/common'
 import { BackIcon } from '../components/icons'
 import { entityName, noteHref, captureHref, previewText, formatRelative, repliesTo, RESPONDS_TO } from '../vault/util'
@@ -14,6 +15,7 @@ import { entityName, noteHref, captureHref, previewText, formatRelative, replies
 export function NoteView() {
   const { id = '' } = useParams()
   const decoded = decodeURIComponent(id)
+  const nav = useNavigate()
 
   const { data, loading, error, reload } = useAsync(
     () => getNote(decoded, { includeLinks: true }),
@@ -135,6 +137,8 @@ export function NoteView() {
               )}
             </section>
           )}
+
+          <NoteControls note={data} onChanged={reload} onDeleted={() => nav('/browse')} />
         </>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { getNote } from '../vault/api'
 import type { Note } from '../vault/types'
 import { captureKindOf } from '../vault/types'
@@ -7,6 +7,7 @@ import { useAsync } from '../vault/useAsync'
 import { Markdown } from '../components/Markdown'
 import { AudioEmbed } from '../components/AudioEmbed'
 import { WeaveEditor } from '../components/WeaveEditor'
+import { NoteControls } from '../components/NoteControls'
 import { Loading, ErrorBanner, EntityChip, Toast } from '../components/common'
 import { BackIcon, captureGlyph, LinkIcon } from '../components/icons'
 import {
@@ -21,6 +22,7 @@ import {
 
 export function CaptureDetail() {
   const { id = '' } = useParams()
+  const nav = useNavigate()
   const [weaving, setWeaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const { data, loading, error, reload } = useAsync(
@@ -120,6 +122,8 @@ export function CaptureDetail() {
               )
             })()}
           </div>
+
+          <NoteControls note={data} onChanged={reload} onDeleted={() => nav('/')} />
         </>
       )}
 
