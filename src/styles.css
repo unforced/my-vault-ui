@@ -1487,13 +1487,18 @@ button { font-family: inherit; cursor: pointer; }
   transition: border-color .15s, box-shadow .15s;
 }
 .mq:hover { border-color: var(--clay-soft); box-shadow: 0 2px 12px rgba(192, 107, 74, 0.06); }
-.mq-domain {
-  position: absolute; top: 10px; right: 11px;
+.mq-tags { display: flex; gap: 6px; margin-bottom: 7px; }
+.mq-domain, .mq-kind {
   font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--ink-faint); background: var(--cream-2);
   border-radius: 999px; padding: 2px 8px;
 }
-.mq-body { font-size: 14px; line-height: 1.56; color: var(--ink); padding-right: 70px; }
+.mq-domain { color: var(--ink-faint); background: var(--cream-2); }
+.mq-kind { color: var(--clay); background: var(--terracotta-wash); font-weight: 600; }
+/* A reflection reads as the AI mirroring something back — a softer accent. */
+.mq-reflection { border-left: 3px solid var(--clay-soft); background: linear-gradient(180deg, var(--cream-2), var(--surface)); }
+.mq-resolved { opacity: 0.66; }
+.mq-resolved:hover { opacity: 1; }
+.mq-body { font-size: 14px; line-height: 1.56; color: var(--ink); }
 .mq-body .markdown p { margin: 2px 0; }
 .mq-body a { color: var(--clay); border-bottom: 1px solid var(--terracotta-wash); }
 .mq-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
@@ -1515,6 +1520,10 @@ button { font-family: inherit; cursor: pointer; }
 .mq-resolve:hover:not(:disabled) { color: var(--ink-soft); }
 .mq-resolve:disabled { opacity: 0.6; cursor: default; }
 .morning-resolved { margin-left: auto; font-size: 12px; color: var(--ink-faint); }
+/* For You inbox */
+.inbox-list { display: flex; flex-direction: column; gap: 2px; }
+.inbox-list .mq { margin: 6px 0; padding: 13px 15px 12px; }
+.inbox-resolved { margin-top: 22px; border-top: 1px solid var(--line-soft); padding-top: 14px; }
 .morning-foot { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
 .morning-respond {
   background: transparent; color: var(--ink-soft); border: 1px solid var(--line);
@@ -1606,6 +1615,14 @@ button { font-family: inherit; cursor: pointer; }
   resize: vertical;
 }
 .nc-textarea:focus { outline: none; border-color: var(--clay-soft); }
+.nc-path-edit { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.nc-path-input {
+  flex: 1; box-sizing: border-box;
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  color: var(--ink); background: var(--surface);
+}
+.nc-path-input:focus { outline: none; border-color: var(--clay-soft); }
 
 /* wikilink to a non-entity note — same look, subtler underline */
 .wikilink.other { border-bottom-style: dotted; }

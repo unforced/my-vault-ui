@@ -1,62 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getNote, listSurfaces, resolveSurface } from '../vault/api'
-import type { Note } from '../vault/types'
+import { getNote, listSurfaces } from '../vault/api'
 import { useAsync } from '../vault/useAsync'
 import { openCapture, CAPTURE_CREATED_EVENT } from '../App'
-import { Markdown } from './Markdown'
+import { SurfaceCard } from './SurfaceCard'
 import { Seed } from './icons'
 
-// The bold lead of a surface ("**The work.** …") → a short label for the reply
-// chip + a11y. Falls back to the path leaf.
-function surfaceLabel(s: Note): string {
-  const m = (s.content ?? '').match(/\*\*(.+?)\*\*/)
-  const lead = (m?.[1] ?? '').trim().replace(/\.$/, '')
-  return lead || (s.path.split('/').pop() ?? 'this')
-}
-
-// One open surface: the prompt, a Respond (threads + auto-resolves), and a quiet
-// Resolve (clear it without answering). Resolving/answering drops it from view.
-function SurfaceCard({ surface, onChanged }: { surface: Note; onChanged: () => void }) {
-  const [busy, setBusy] = useState(false)
-  const label = surfaceLabel(surface)
-  const domain = surface.metadata?.domain ? String(surface.metadata.domain) : null
-
-  async function resolve() {
-    setBusy(true)
-    try {
-      await resolveSurface(surface.id)
-      onChanged()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="mq">
-      {domain && <span className="mq-domain">{domain}</span>}
-      <div className="mq-body">
-        <Markdown content={surface.content ?? ''} />
-      </div>
-      <div className="mq-actions">
-        <button
-          className="mq-respond"
-          onClick={() => openCapture({ id: surface.id, label, resolveOnReply: true })}
-        >
-          Respond <span className="mq-respond-arrow">↩</span>
-        </button>
-        <button className="mq-resolve" onClick={resolve} disabled={busy}>
-          {busy ? 'Resolving…' : 'Resolve'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// The morning surface on Today: the AI's open prompts as answerable cards — the
-// front-end of the conversational loop. Each card threads a reply back
-// (responds-to) and auto-resolves on answer; Resolve clears one you'd rather
-// skip. Pulls live from the `surface/*` notes the Weaver tends.
+// The morning surface on Today: the AI's open prompts + reflections as
+// answerable cards — the front-end of the conversational loop. Pulls live from
+// the `surface/*` notes the Weaver tends; answering/resolving drops a card. The
+// fuller history (and resolved items) lives on the For You inbox.
 export function MorningCard() {
   const surfaces = useAsync(() => listSurfaces(), [])
   const now = useAsync(() => getNote('Now').catch(() => null), [])
@@ -87,11 +40,9 @@ export function MorningCard() {
       <div className="morning-head">
         <span className="morning-glyph"><Seed size={18} /></span>
         <h2>This morning</h2>
-        {resolvedCount > 0 && (
-          <span className="morning-resolved" title="Prompts you've answered or cleared">
-            {resolvedCount} resolved
-          </span>
-        )}
+        <Link className="morning-all" to="/inbox">
+          For You →
+        </Link>
       </div>
 
       {open.length > 0 ? (
@@ -110,6 +61,11 @@ export function MorningCard() {
         <button className="morning-respond" onClick={() => openCapture()}>
           Capture something else
         </button>
+        {resolvedCount > 0 && (
+          <Link className="morning-now" to="/inbox">
+            {resolvedCount} resolved →
+          </Link>
+        )}
         {hasNow && (
           <Link className="morning-now" to="/note/Now">
             What's alive now →

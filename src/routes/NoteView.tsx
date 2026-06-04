@@ -138,7 +138,12 @@ export function NoteView() {
             </section>
           )}
 
-          <NoteControls note={data} onChanged={reload} onDeleted={() => nav('/browse')} />
+          <NoteControls
+            note={data}
+            onChanged={reload}
+            onDeleted={() => nav('/browse')}
+            onMoved={(p) => nav(`/note/${encodeURIComponent(p)}`)}
+          />
         </>
       )}
     </div>

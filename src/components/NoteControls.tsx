@@ -1,24 +1,33 @@
 import { useState } from 'react'
-import { patchNote, deleteNote } from '../vault/api'
+import { patchNote, renameNotePath, deleteNote } from '../vault/api'
 import type { Note } from '../vault/types'
 
 // Reusable note plumbing: the path + id (copyable, so the structure is legible
-// even though it's mostly invisible), plus inline Edit and Delete. Captures are
-// "sacred" only with respect to the *AI* — Aaron can hand-edit his own notes.
+// even though it's mostly invisible), plus inline Edit, move (path), and Delete.
+// Captures are "sacred" only with respect to the *AI* — Aaron can hand-edit his
+// own notes.
 //
-// Edits the content via PATCH; deletes via DELETE (removing the note + its
-// links). `onChanged` reloads the host; `onDeleted` navigates away.
+// Edits content via PATCH and (optionally) moves the note by changing its path —
+// the id is stable, so links survive. `onChanged` reloads the host; `onMoved`
+// fires after a path change so a host reached *by path* can re-navigate;
+// `onDeleted` navigates away. Set `allowPathEdit={false}` where a richer rename
+// exists (entities use rename-with-propagation instead).
 export function NoteControls({
   note,
   onChanged,
   onDeleted,
+  onMoved,
+  allowPathEdit = true,
 }: {
   note: Note
   onChanged: () => void
   onDeleted: () => void
+  onMoved?: (newPath: string) => void
+  allowPathEdit?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.content ?? '')
+  const [draftPath, setDraftPath] = useState(note.path)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -33,10 +42,14 @@ export function NoteControls({
   async function save() {
     setSaving(true)
     setErr(null)
+    const newPath = draftPath.trim()
+    const moving = allowPathEdit && newPath.length > 0 && newPath !== note.path
     try {
-      await patchNote(note.id, { content: draft })
+      if (draft !== (note.content ?? '')) await patchNote(note.id, { content: draft })
+      if (moving) await renameNotePath(note.id, newPath)
       setEditing(false)
-      onChanged()
+      if (moving && onMoved) onMoved(newPath)
+      else onChanged()
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
@@ -79,6 +92,17 @@ export function NoteControls({
 
       {editing ? (
         <div className="nc-edit">
+          {allowPathEdit && (
+            <label className="nc-path-edit">
+              <span className="nc-k">path</span>
+              <input
+                className="nc-path-input"
+                value={draftPath}
+                onChange={(e) => setDraftPath(e.target.value)}
+                spellCheck={false}
+              />
+            </label>
+          )}
           <textarea
             className="nc-textarea"
             value={draft}
@@ -94,6 +118,7 @@ export function NoteControls({
               onClick={() => {
                 setEditing(false)
                 setDraft(note.content ?? '')
+                setDraftPath(note.path)
                 setErr(null)
               }}
             >

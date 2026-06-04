@@ -7,6 +7,7 @@ import { useAsync } from '../vault/useAsync'
 import { Markdown } from '../components/Markdown'
 import { Loading, ErrorBanner, EmptyState, Toast } from '../components/common'
 import { UnlinkedMentions } from '../components/UnlinkedMentions'
+import { NoteControls } from '../components/NoteControls'
 import { RenameEntity } from '../components/RenameEntity'
 import { BackIcon } from '../components/icons'
 import {
@@ -36,6 +37,7 @@ const TYPE_FIELDS: Record<string, string[]> = {
 export function EntityDetail() {
   const { path = '' } = useParams()
   const decoded = decodeURIComponent(path)
+  const nav = useNavigate()
   const [toast, setToast] = useState<string | null>(null)
 
   const { data, loading, error, reload } = useAsync(
@@ -101,6 +103,13 @@ export function EntityDetail() {
               <RelatedRail entity={data} captureNotes={captureNotes.data ?? []} />
             </div>
           </div>
+
+          <NoteControls
+            note={data}
+            onChanged={reload}
+            onDeleted={() => nav('/browse')}
+            allowPathEdit={false}
+          />
         </>
       )}
       {toast && <Toast message={toast} />}
