@@ -19,6 +19,8 @@ import {
   previewText,
   sourceCaptures,
   structuralConnections,
+  groundedIn,
+  formatRelative,
 } from '../vault/util'
 import { RELATIONSHIP_LABELS } from '../vault/types'
 
@@ -88,6 +90,7 @@ export function EntityDetail() {
                 <div style={{ marginTop: 36 }}>
                   <div className="section-title">Note</div>
                   <Markdown content={data.content} />
+                  <GroundedIn entity={data} captureNotes={captureNotes.data ?? []} />
                 </div>
               )}
             </div>
@@ -101,6 +104,33 @@ export function EntityDetail() {
         </>
       )}
       {toast && <Toast message={toast} />}
+    </div>
+  )
+}
+
+// Downward citations: the captures the current synthesis is grounded in. The
+// provenance layer — every woven claim is one click from the words you spoke.
+function GroundedIn({ entity, captureNotes }: { entity: Note; captureNotes: Note[] }) {
+  const cites = groundedIn(entity)
+  if (cites.length === 0) return null
+  const byId = new Map(captureNotes.map((n) => [n.id, n]))
+  return (
+    <div className="grounded-in">
+      <div className="grounded-head">Grounded in</div>
+      <p className="grounded-hint">The captures this draws from — your own words, one click away.</p>
+      <div className="grounded-list">
+        {cites.map((c) => {
+          const full = byId.get(c.id)
+          const when = full?.createdAt ?? c.createdAt
+          const preview = full ? previewText(full, 90) : (c.path.split('/').pop() ?? c.id)
+          return (
+            <Link key={c.id} to={captureHref(c)} className="grounded-cite">
+              {when && <span className="gc-when">{formatRelative(when)}</span>}
+              <span className="gc-text">{preview}</span>
+            </Link>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -357,6 +357,27 @@ export function linkedEntities(note: Note): LinkedEntity[] {
   return out
 }
 
+// The relationship a woven page uses to cite a source capture (downward link).
+export const SOURCED_FROM = 'sourced-from'
+
+// Downward citations: the captures a woven page's CURRENT synthesis is grounded
+// in — outgoing `sourced-from` links from the entity to captures. Curated and
+// mutable (they change as the synthesis matures), distinct from the permanent
+// upward `mentions` shown in "Across time". This is the provenance layer:
+// every claim traceable to the words you actually spoke.
+export function groundedIn(entity: Note): NoteRef[] {
+  const out: NoteRef[] = []
+  const seen = new Set<string>()
+  for (const l of entity.links ?? []) {
+    if (l.sourceId !== entity.id || l.relationship !== SOURCED_FROM) continue
+    const ref = l.targetNote
+    if (!ref || seen.has(ref.id)) continue
+    seen.add(ref.id)
+    out.push(ref)
+  }
+  return out
+}
+
 // A direct entity↔entity link (structural), from one entity's `links` array.
 // `other` is the entity on the far end; `relationship` is the edge; `outgoing`
 // is true when THIS entity is the link's source (so the UI can phrase direction:
