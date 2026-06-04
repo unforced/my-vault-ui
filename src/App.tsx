@@ -21,7 +21,9 @@ export const CAPTURE_CREATED_EVENT = 'pv:capture-created'
 export const OPEN_CAPTURE_EVENT = 'pv:open-capture'
 
 // A surface a capture is answering — threads the reply back via `responds-to`.
-export type ReplyTarget = { id: string; label: string }
+// `resolveOnReply` auto-resolves that surface once the reply syncs (the default
+// for inquiry prompts: answering it clears it from the morning view).
+export type ReplyTarget = { id: string; label: string; resolveOnReply?: boolean }
 
 // Helper for routes to request the capture modal. Pass a reply target to open
 // it in "reply" mode — the resulting capture links `responds-to` that surface.

@@ -1,24 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Note } from '../vault/types'
 import { capturePath, memoFilename, RESPONDS_TO } from '../vault/util'
-import { linkCapture } from '../vault/api'
+import { linkCapture, resolveSurface } from '../vault/api'
 import { enqueue, putBlob } from '../vault/sync/outbox'
 import { newLocalId } from '../vault/sync/db'
 import { runOnce } from '../vault/sync/engine'
 import { CloseIcon, TextGlyph, VoiceGlyph } from './icons'
 
-// A surface this capture is answering (e.g. a morning Open Inquiry question).
-type ReplyTarget = { id: string; label: string }
+// A surface this capture is answering (e.g. a morning inquiry prompt).
+type ReplyTarget = { id: string; label: string; resolveOnReply?: boolean }
 
 // Thread an online-synced reply back to its surface. The `responds_to` metadata
 // is already on the note (set at create, survives offline); this adds the graph
-// edge so the surface can show its replies. Best-effort — never blocks capture.
+// edge so the surface can show its replies, and — for inquiry prompts —
+// auto-resolves it. Best-effort: never blocks capture.
 async function threadReply(synced: Note, replyTo: ReplyTarget | null | undefined) {
   if (!replyTo) return
   try {
     await linkCapture(synced.id, replyTo.id, RESPONDS_TO)
+    if (replyTo.resolveOnReply) await resolveSurface(replyTo.id)
   } catch {
-    /* link is non-essential; the responds_to metadata still records the reply */
+    /* link/resolve are non-essential; the responds_to metadata still records it */
   }
 }
 

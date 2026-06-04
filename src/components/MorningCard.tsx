@@ -1,100 +1,117 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getNote } from '../vault/api'
+import { getNote, listSurfaces, resolveSurface } from '../vault/api'
+import type { Note } from '../vault/types'
 import { useAsync } from '../vault/useAsync'
-import { openCapture } from '../App'
+import { openCapture, CAPTURE_CREATED_EVENT } from '../App'
 import { Markdown } from './Markdown'
 import { Seed } from './icons'
 
-// Pull a "## Heading" section's body out of a note's markdown.
-function section(content: string, heading: string): string {
-  const lines = content.split('\n')
-  const start = lines.findIndex((l) => l.trim().toLowerCase() === `## ${heading}`.toLowerCase())
-  if (start < 0) return ''
-  let end = lines.length
-  for (let i = start + 1; i < lines.length; i++) {
-    if (/^##\s/.test(lines[i])) {
-      end = i
-      break
+// The bold lead of a surface ("**The work.** …") → a short label for the reply
+// chip + a11y. Falls back to the path leaf.
+function surfaceLabel(s: Note): string {
+  const m = (s.content ?? '').match(/\*\*(.+?)\*\*/)
+  const lead = (m?.[1] ?? '').trim().replace(/\.$/, '')
+  return lead || (s.path.split('/').pop() ?? 'this')
+}
+
+// One open surface: the prompt, a Respond (threads + auto-resolves), and a quiet
+// Resolve (clear it without answering). Resolving/answering drops it from view.
+function SurfaceCard({ surface, onChanged }: { surface: Note; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const label = surfaceLabel(surface)
+  const domain = surface.metadata?.domain ? String(surface.metadata.domain) : null
+
+  async function resolve() {
+    setBusy(true)
+    try {
+      await resolveSurface(surface.id)
+      onChanged()
+    } finally {
+      setBusy(false)
     }
   }
-  return lines.slice(start + 1, end).join('\n').trim()
+
+  return (
+    <div className="mq">
+      {domain && <span className="mq-domain">{domain}</span>}
+      <div className="mq-body">
+        <Markdown content={surface.content ?? ''} />
+      </div>
+      <div className="mq-actions">
+        <button
+          className="mq-respond"
+          onClick={() => openCapture({ id: surface.id, label, resolveOnReply: true })}
+        >
+          Respond <span className="mq-respond-arrow">↩</span>
+        </button>
+        <button className="mq-resolve" onClick={resolve} disabled={busy}>
+          {busy ? 'Resolving…' : 'Resolve'}
+        </button>
+      </div>
+    </div>
+  )
 }
 
-// Split "## This morning" into its individual prompts, each a block that opens
-// with a bold lead (**The work.** or the older **N. Title.** form). Returns the
-// raw markdown block + a short label (the bold lead) used as the reply target so
-// a response threads to the right prompt. Falls back to one block otherwise.
-function splitQuestions(body: string): { block: string; label: string }[] {
-  if (!body) return []
-  const blocks = body.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean)
-  const questions = blocks.filter((b) => /^\*\*/.test(b))
-  if (questions.length === 0) return body ? [{ block: body, label: 'this morning' }] : []
-  return questions.map((block) => {
-    const m = block.match(/^\*\*(.+?)\*\*/)
-    const inner = (m?.[1] ?? '').trim()
-    const label = inner.replace(/^\d+\.\s*/, '').replace(/\.$/, '') || 'this morning'
-    return { block, label }
-  })
-}
-
-// The morning surface on Today: the live Open Inquiry questions, each its own
-// card you can answer. The front-end of the daily tending loop — and the start
-// of the conversation: a "Respond" threads your capture back to that question
-// (responds-to), so the next weave can read the exchange. Renders nothing if
-// neither tending note exists yet (graceful before the first weave).
+// The morning surface on Today: the AI's open prompts as answerable cards — the
+// front-end of the conversational loop. Each card threads a reply back
+// (responds-to) and auto-resolves on answer; Resolve clears one you'd rather
+// skip. Pulls live from the `surface/*` notes the Weaver tends.
 export function MorningCard() {
-  const { data } = useAsync(async () => {
-    const [now, inquiry] = await Promise.allSettled([getNote('Now'), getNote('Open Inquiry')])
-    return {
-      now: now.status === 'fulfilled' ? now.value : null,
-      inquiry: inquiry.status === 'fulfilled' ? inquiry.value : null,
+  const surfaces = useAsync(() => listSurfaces(), [])
+  const now = useAsync(() => getNote('Now').catch(() => null), [])
+
+  // Re-pull when a capture lands or syncs, so an answered prompt drops away.
+  useEffect(() => {
+    const reload = () => surfaces.reload()
+    window.addEventListener(CAPTURE_CREATED_EVENT, reload)
+    window.addEventListener('pv:capture-synced', reload)
+    return () => {
+      window.removeEventListener(CAPTURE_CREATED_EVENT, reload)
+      window.removeEventListener('pv:capture-synced', reload)
     }
+    // reload is stable from useAsync; run once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!data || (!data.now && !data.inquiry)) return null
+  const all = surfaces.data ?? []
+  const open = all.filter((s) => (s.metadata?.state ?? 'open') === 'open')
+  const resolvedCount = all.length - open.length
+  const hasNow = Boolean(now.data)
 
-  const inquiryBody = data.inquiry?.content ?? ''
-  const questions = splitQuestions(section(inquiryBody, 'This morning'))
-  const throughline = section(data.now?.content ?? '', 'The throughline')
+  // Nothing to show until we know there are surfaces (graceful before first weave).
+  if (!surfaces.loading && all.length === 0 && !hasNow) return null
 
   return (
     <section className="morning-card">
       <div className="morning-head">
         <span className="morning-glyph"><Seed size={18} /></span>
         <h2>This morning</h2>
-        {data.inquiry && (
-          <Link className="morning-all" to="/note/Open%20Inquiry">
-            Open Inquiry →
-          </Link>
+        {resolvedCount > 0 && (
+          <span className="morning-resolved" title="Prompts you've answered or cleared">
+            {resolvedCount} resolved
+          </span>
         )}
       </div>
 
-      {questions.length > 0 ? (
+      {open.length > 0 ? (
         <div className="morning-questions">
-          {questions.map((q, i) => (
-            <div className="mq" key={i}>
-              <div className="mq-body">
-                <Markdown content={q.block} />
-              </div>
-              <button
-                className="mq-respond"
-                onClick={() => openCapture({ id: 'Open Inquiry', label: q.label })}
-              >
-                Respond <span className="mq-respond-arrow">↩</span>
-              </button>
-            </div>
+          {open.map((s) => (
+            <SurfaceCard key={s.id} surface={s} onChanged={() => surfaces.reload()} />
           ))}
         </div>
-      ) : data.inquiry ? (
-        <p className="morning-quiet">No questions waiting — a quiet morning.</p>
-      ) : null}
+      ) : surfaces.loading ? (
+        <p className="morning-quiet">Gathering this morning's prompts…</p>
+      ) : (
+        <p className="morning-quiet">All clear — nothing waiting. The next weave will pose fresh prompts.</p>
+      )}
 
       <div className="morning-foot">
         <button className="morning-respond" onClick={() => openCapture()}>
           Capture something else
         </button>
-        {data.now && (
-          <Link className="morning-now" to="/note/Now" title={throughline}>
+        {hasNow && (
+          <Link className="morning-now" to="/note/Now">
             What's alive now →
           </Link>
         )}

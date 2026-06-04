@@ -256,6 +256,31 @@ export function deleteNote(id: string): Promise<void> {
   return request<void>('DELETE', `/notes/${encodeURIComponent(id)}`)
 }
 
+// ---- Surfaces (the "For You" stream — prompts/reflections the AI poses) ----
+//
+// A surface is a note tagged `surface/*` with a `state` (open|resolved) the AI
+// puts in front of Aaron. Answered by a capture linking `responds-to` it;
+// answering auto-resolves it (the default). Few in number, so we fetch all and
+// split open/resolved client-side rather than relying on an indexed filter.
+export function listSurfaces(): Promise<Note[]> {
+  const p = new URLSearchParams()
+  p.set('tag', 'surface')
+  p.set('include_links', 'true')
+  p.set('include_content', 'true')
+  p.set('include_metadata', 'true')
+  p.set('limit', '100')
+  p.set('sort', 'desc')
+  return request<Note[]>('GET', `/notes?${p.toString()}`)
+}
+
+export function resolveSurface(id: string): Promise<Note> {
+  return patchNote(id, { metadata: { state: 'resolved' } })
+}
+
+export function reopenSurface(id: string): Promise<Note> {
+  return patchNote(id, { metadata: { state: 'open' } })
+}
+
 // ---- Proposals (deterministic review surface — NO AI) ----
 //
 // Proposals are notes tagged `proposal` carrying a Weaver suggestion in their
