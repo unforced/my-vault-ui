@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { getNote, patchNote } from '../vault/api'
 import type { Note, NoteRef } from '../vault/types'
-import { entityTypeOf, isCapture } from '../vault/types'
+import { entityTypeOf, entitySubtypeOf, isCapture } from '../vault/types'
 import { useAsync } from '../vault/useAsync'
 import { Markdown } from '../components/Markdown'
 import { Loading, ErrorBanner, EmptyState, Toast } from '../components/common'
@@ -73,27 +73,42 @@ export function EntityDetail() {
           <EntityHeader entity={data} onSaved={() => { setToast('Summary saved'); setTimeout(() => setToast(null), 1800); reload() }} />
 
           <div className="detail-cols">
-            {/* Linked captures timeline */}
             <div>
-              <div className="section-title">Across time</div>
-              {captureNotes.loading && <Loading label="Tracing the threads…" />}
-              {captureNotes.data && captureNotes.data.length === 0 && (
-                <EmptyState art="🕸" title="No captures woven here yet">
-                  When captures link to {entityName(data)}, they'll gather here as a timeline.
-                </EmptyState>
-              )}
-              {captureNotes.data && captureNotes.data.length > 0 && (
-                <CaptureTimeline notes={captureNotes.data} />
-              )}
+              {/* A piece (essay/book) is a standalone work — its content is the
+                  main event. Skip the capture-timeline scaffolding and lead with
+                  the writing + its publish meta. Other entities keep "Across time". */}
+              {entitySubtypeOf(data) === 'piece' ? (
+                <>
+                  {data.content && previewText(data).length > 0 && (
+                    <>
+                      <PieceMeta entity={data} />
+                      <Markdown content={data.content} />
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="section-title">Across time</div>
+                  {captureNotes.loading && <Loading label="Tracing the threads…" />}
+                  {captureNotes.data && captureNotes.data.length === 0 && (
+                    <EmptyState art="🕸" title="No captures woven here yet">
+                      When captures link to {entityName(data)}, they'll gather here as a timeline.
+                    </EmptyState>
+                  )}
+                  {captureNotes.data && captureNotes.data.length > 0 && (
+                    <CaptureTimeline notes={captureNotes.data} />
+                  )}
 
-              <UnlinkedMentions entity={data} onLinked={reload} />
+                  <UnlinkedMentions entity={data} onLinked={reload} />
 
-              {data.content && previewText(data).length > 0 && (
-                <div style={{ marginTop: 36 }}>
-                  <div className="section-title">Note</div>
-                  <Markdown content={data.content} />
-                  <GroundedIn entity={data} captureNotes={captureNotes.data ?? []} />
-                </div>
+                  {data.content && previewText(data).length > 0 && (
+                    <div style={{ marginTop: 36 }}>
+                      <div className="section-title">Note</div>
+                      <Markdown content={data.content} />
+                      <GroundedIn entity={data} captureNotes={captureNotes.data ?? []} />
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -144,6 +159,26 @@ function GroundedIn({ entity, captureNotes }: { entity: Note; captureNotes: Note
   )
 }
 
+// A piece's publish line — stage, date, and a link out to the live post.
+function PieceMeta({ entity }: { entity: Note }) {
+  const m = entity.metadata ?? {}
+  const stage = m.stage ? String(m.stage) : null
+  const date = m.published_at ? String(m.published_at) : null
+  const url = m.url ? String(m.url) : null
+  if (!stage && !date && !url) return null
+  return (
+    <div className="piece-meta">
+      {stage && <span className="piece-stage">{stage}</span>}
+      {date && <span className="piece-meta-date">{date}</span>}
+      {url && (
+        <a className="piece-meta-link" href={url} target="_blank" rel="noreferrer">
+          View on unforced.org →
+        </a>
+      )}
+    </div>
+  )
+}
+
 function EntityHeader({ entity, onSaved }: { entity: Note; onSaved: () => void }) {
   const type = entityTypeOf(entity)
   const nav = useNavigate()
@@ -167,7 +202,7 @@ function EntityHeader({ entity, onSaved }: { entity: Note; onSaved: () => void }
   return (
     <div className={`t-${type ?? ''}`}>
       <div className="detail-head">
-        <span className="type-badge">{type}</span>
+        <span className="type-badge">{entitySubtypeOf(entity) ?? type}</span>
       </div>
       <h1 className="detail-title">
         {entityName(entity)}
@@ -317,6 +352,8 @@ function RelatedRail({ entity, captureNotes }: { entity: Note; captureNotes: Not
     }
     return [...counts.values()].sort((a, b) => b.n - a.n).slice(0, 14)
   }, [captureNotes, entity.id])
+
+  if (related.length === 0) return null
 
   return (
     <aside className="related-card">
