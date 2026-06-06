@@ -1583,6 +1583,24 @@ button { font-family: inherit; cursor: pointer; }
 .link-chip:hover { border-color: var(--clay-soft); }
 .lc-rel { font-size: 11px; color: var(--ink-faint); }
 
+/* Dev section — the development domain home. */
+.dev-section { margin-bottom: 26px; }
+.dev-builds { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 4px; }
+.dev-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+@media (max-width: 720px) { .dev-cols { grid-template-columns: 1fr; } }
+.dev-hint { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 10px; font-style: italic; }
+.dev-craft-list { display: flex; flex-direction: column; gap: 6px; }
+.dev-craft-item {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  border: 1px solid var(--line); border-left: 3px solid var(--clay-soft);
+  border-radius: 9px; padding: 9px 12px; background: var(--surface);
+  text-decoration: none; color: var(--ink); font-size: 13.5px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.dev-craft-item:hover { border-color: var(--clay-soft); box-shadow: 0 2px 12px rgba(192, 107, 74, 0.06); }
+.dev-craft-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-craft-when { font-size: 11.5px; color: var(--ink-faint); flex-shrink: 0; }
+
 /* Note plumbing: copyable path/id + inline edit/delete (any note view). */
 .pc-keep-alias {
   display: inline-block; margin-top: 6px;

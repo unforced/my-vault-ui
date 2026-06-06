@@ -8,6 +8,7 @@ import { Config } from './routes/Config'
 import { OAuthCallback } from './routes/OAuthCallback'
 import { Today } from './routes/Today'
 import { Inbox } from './routes/Inbox'
+import { Dev } from './routes/Dev'
 import { Weave } from './routes/Weave'
 import { Proposals } from './routes/Proposals'
 import { Browse } from './routes/Browse'
@@ -37,6 +38,7 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <Today /> },
         { path: 'inbox', element: <Inbox /> },
+        { path: 'dev', element: <Dev /> },
         { path: 'weave', element: <Weave /> },
         // Back-compat: the old Proposals route now redirects into Weave.
         { path: 'proposals', element: <Proposals /> },
