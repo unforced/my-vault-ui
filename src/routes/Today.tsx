@@ -9,6 +9,7 @@ import { pendingCaptures, onOutboxChange } from '../vault/sync/outbox'
 import { useAsync } from '../vault/useAsync'
 import { CaptureCard } from '../components/CaptureCard'
 import { MorningCard } from '../components/MorningCard'
+import { FocusPanel } from '../components/FocusPanel'
 import { Loading, ErrorBanner, EmptyState, EntityChip } from '../components/common'
 import {
   groupByDay,
@@ -118,11 +119,17 @@ export function Today() {
         <div className="kicker">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
         <h1>Today</h1>
         <p className="sub">What's alive in your vault, newest first.</p>
+        <nav className="domain-row">
+          <Link to="/dev" className="domain-pill">Dev</Link>
+          <Link to="/writing" className="domain-pill">Writing</Link>
+          <Link to="/note/The%20Arc" className="domain-pill">Life · the Arc</Link>
+        </nav>
       </div>
 
       <div className="today-grid">
-        {/* ── Main column: timeline spine ── */}
+        {/* ── Main column: focus → morning prompts → capture → spine ── */}
         <div>
+          <FocusPanel />
           <MorningCard />
           <button className="new-capture-card" onClick={() => openCapture()}>
             <span className="ncc-glyph"><PlusIcon /></span>

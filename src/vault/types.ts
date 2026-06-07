@@ -53,12 +53,23 @@ export interface Note {
   byteSize?: number
 }
 
+export interface TagField {
+  type?: string
+  description?: string
+  enum?: string[]
+  indexed?: boolean
+}
+
 export interface TagRecord {
   name: string
   count: number
-  fields?: unknown
+  description?: string
+  fields?: Record<string, TagField> | null
+  relationships?: unknown
   parent_names?: string[]
   metadata?: Record<string, unknown>
+  created_at?: string
+  updated_at?: string
 }
 
 // ---- Entity typing (derived from tags) ----

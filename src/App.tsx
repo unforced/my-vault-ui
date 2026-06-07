@@ -12,7 +12,7 @@ import { Toast } from './components/common'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SyncBadge } from './components/SyncBadge'
 import type { Note } from './vault/types'
-import { Seed, SearchIcon, SunIcon, MoonIcon, PlusIcon } from './components/icons'
+import { Seed, SearchIcon, PlusIcon } from './components/icons'
 
 // Broadcast so the active route (e.g. Today) can refresh after a capture lands,
 // without threading a callback through the router.
@@ -44,6 +44,7 @@ export function RequireConfig() {
 function Shell() {
   const { theme, toggle } = useTheme()
   const [search, setSearch] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [capturing, setCapturing] = useState(false)
   // When capture is opened in reply mode, the surface being answered.
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null)
@@ -147,8 +148,6 @@ function Shell() {
           <nav className="nav">
             <NavLink to="/" end>Today</NavLink>
             <NavLink to="/inbox">For You</NavLink>
-            <NavLink to="/dev">Dev</NavLink>
-            <NavLink to="/writing">Writing</NavLink>
             <NavLink to="/weave" className={({ isActive }) => (isActive ? 'active nav-proposals' : 'nav-proposals')}>
               Weave
               {weaveCount ? <span className="nav-badge">{weaveCount}</span> : null}
@@ -166,14 +165,27 @@ function Shell() {
             <span>Search</span>
             <kbd>⌘K</kbd>
           </button>
-          <button className="icon-btn" onClick={toggle} aria-label="Toggle theme" title="Toggle light/dark">
-            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-          </button>
-          <button className="icon-btn" onClick={signOut} aria-label="Change vault" title="Change vault / sign out">
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-          </button>
+          <div className="overflow-menu">
+            <button className="icon-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="More" title="More">
+              <span style={{ fontSize: 18, lineHeight: 1 }}>⋯</span>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="overflow-scrim" onClick={() => setMenuOpen(false)} />
+                <div className="overflow-pop">
+                  <NavLink to="/dev" className="overflow-item" onClick={() => setMenuOpen(false)}>Dev</NavLink>
+                  <NavLink to="/writing" className="overflow-item" onClick={() => setMenuOpen(false)}>Writing</NavLink>
+                  <NavLink to="/note/The%20Arc" className="overflow-item" onClick={() => setMenuOpen(false)}>Life · the Arc</NavLink>
+                  <NavLink to="/schema" className="overflow-item" onClick={() => setMenuOpen(false)}>Tag schema</NavLink>
+                  <div className="overflow-sep" />
+                  <button className="overflow-item" onClick={() => { toggle(); setMenuOpen(false) }}>
+                    {theme === 'light' ? 'Dark mode' : 'Light mode'}
+                  </button>
+                  <button className="overflow-item" onClick={() => { setMenuOpen(false); signOut() }}>Sign out</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

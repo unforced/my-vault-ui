@@ -1601,6 +1601,64 @@ button { font-family: inherit; cursor: pointer; }
 .dev-craft-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dev-craft-when { font-size: 11.5px; color: var(--ink-faint); flex-shrink: 0; }
 .piece-stage { margin-left: 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--clay); background: var(--terracotta-wash); border-radius: 999px; padding: 1px 7px; }
+
+/* Domain quick-links on Today (the domains came off the top bar). */
+.domain-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.domain-pill {
+  font-size: 12.5px; color: var(--ink-soft); text-decoration: none;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 13px;
+  transition: border-color .15s, color .15s;
+}
+.domain-pill:hover { border-color: var(--clay-soft); color: var(--clay); }
+
+/* "What needs done" focus panel. */
+.focus-panel {
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--clay-soft);
+  border-radius: 14px; padding: 14px 18px; margin-bottom: 16px;
+}
+.focus-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+.focus-head h2 { font-family: Fraunces, serif; font-size: 17px; margin: 0; color: var(--ink); }
+.focus-all { margin-left: auto; font-size: 12.5px; color: var(--clay); text-decoration: none; }
+.focus-all:hover { text-decoration: underline; }
+.focus-loops { font-size: 14px; line-height: 1.55; color: var(--ink); }
+.focus-loops .markdown ul { margin: 4px 0; padding-left: 2px; list-style: none; }
+.focus-loops .markdown li { margin: 5px 0; padding-left: 2px; }
+.focus-loops a { color: var(--clay); }
+
+/* Header overflow (⋯) menu — domains + settings tucked away. */
+.overflow-menu { position: relative; }
+.overflow-scrim { position: fixed; inset: 0; z-index: 40; }
+.overflow-pop {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 50;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow-lift, 0 8px 28px rgba(0,0,0,0.12)); padding: 6px; min-width: 168px;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.overflow-item {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer;
+  padding: 8px 11px; border-radius: 8px; text-decoration: none;
+}
+.overflow-item:hover, .overflow-item.active { background: var(--cream-2); color: var(--clay); }
+.overflow-sep { height: 1px; background: var(--line-soft); margin: 5px 4px; }
+
+/* Tag schema view. */
+.schema-tree { margin-top: 6px; }
+.schema-node { padding: 2px 0; }
+.schema-children { border-left: 1px solid var(--line-soft); margin-left: 4px; padding-left: 8px; margin-top: 4px; }
+.schema-row { display: flex; align-items: center; gap: 9px; }
+.schema-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; color: var(--ink); font-weight: 600; }
+.schema-count { font-size: 11px; color: var(--ink-faint); background: var(--cream-2); border-radius: 999px; padding: 1px 8px; }
+.schema-desc { font-size: 12.5px; color: var(--ink-soft); margin: 2px 0 4px; line-height: 1.45; max-width: 68ch; }
+.schema-fields { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+.schema-field {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 2px 8px; font-size: 11.5px;
+}
+.sf-key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ink); }
+.sf-type { color: var(--ink-faint); }
+.sf-enum { color: var(--ink-soft); }
+.sf-indexed { color: var(--clay); background: var(--terracotta-wash); border-radius: 999px; padding: 0 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
 .piece-meta { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; padding-bottom: 14px; border-bottom: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-faint); }
 .piece-meta .piece-stage { margin-left: 0; }
 .piece-meta-date { color: var(--ink-soft); }

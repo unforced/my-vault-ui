@@ -570,7 +570,8 @@ export function addAttachment(
 // ---- Tags ----
 
 export function listTags(): Promise<TagRecord[]> {
-  return request<TagRecord[]>('GET', '/tags')
+  // include_schema → description, fields, parent_names, relationships, timestamps.
+  return request<TagRecord[]>('GET', '/tags?include_schema=true')
 }
 
 export function getTag(name: string): Promise<TagRecord> {
