@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listNotes, listPendingProposals } from '../vault/api'
+import { listUnwovenCaptures, listPendingProposals, skipWeave } from '../vault/api'
 import type { Note } from '../vault/types'
 import { type EntityType } from '../vault/types'
 import { captureKindOf } from '../vault/types'
@@ -48,18 +48,9 @@ export function Weave() {
   const proposals = useAsync(() => listPendingProposals(), [])
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set())
 
-  // ── Unwoven captures (the relocated "To weave" tray) ──
-  const unwoven = useAsync(
-    () =>
-      listNotes({
-        tag: 'capture',
-        hasLinks: false,
-        sort: 'desc',
-        limit: UNWOVEN_LIMIT,
-        includeContent: true,
-      }),
-    [],
-  )
+  // ── Unwoven captures: FRESH loose threads only (recent + not a dream + not
+  // skipped) — not the historical archive, which needn't ever be fully woven. ──
+  const unwoven = useAsync(() => listUnwovenCaptures(21, UNWOVEN_LIMIT), [])
   const [triaging, setTriaging] = useState<Note | null>(null)
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
 
@@ -106,6 +97,18 @@ export function Weave() {
     flash('Deleted 🍂')
     unwoven.reload()
     window.dispatchEvent(new CustomEvent(PROPOSAL_RESOLVED_EVENT))
+  }
+
+  // "Doesn't need weaving" — mark it skipped (a dream, a fleeting note, a test).
+  // Drops it from the queue + badge; the content is untouched.
+  async function skip(id: string) {
+    setRemovedIds((s) => new Set(s).add(id))
+    flash('Skipped — won’t ask again 🍃')
+    try {
+      await skipWeave(id)
+    } finally {
+      window.dispatchEvent(new CustomEvent(PROPOSAL_RESOLVED_EVENT))
+    }
   }
 
   // Belt-and-suspenders: the list must ONLY ever show pending proposals.
@@ -225,8 +228,9 @@ export function Weave() {
       {tab === 'unwoven' && (
         <div className="weave-panel">
           <p className="weave-sub">
-            Recent captures with no links yet. Open one to connect it to your projects, people, and
-            threads.
+            Fresh captures (last few weeks) with no links yet — the loose threads. Weave one in, or
+            skip the ones that don't need it (a dream, a fleeting note). Older captures live in the
+            time navigator, not here.
           </p>
           {unwoven.loading && <Loading label="Finding loose threads…" />}
           {Boolean(unwoven.error) && <ErrorBanner error={unwoven.error} onRetry={unwoven.reload} />}
@@ -239,13 +243,22 @@ export function Weave() {
             {trayItems.map((c) => {
               const kind = captureKindOf(c)
               return (
-                <button key={c.id} className="weave-item" onClick={() => setTriaging(c)}>
-                  <span className="wi-glyph">{captureGlyph(kind)}</span>
-                  <span className="wi-text">
-                    <div className="wi-preview">{previewText(c, 200) || '(no text)'}</div>
-                    <div className="wi-time">{formatRelative(c.createdAt)}</div>
-                  </span>
-                </button>
+                <div key={c.id} className="weave-item">
+                  <button className="weave-item-main" onClick={() => setTriaging(c)}>
+                    <span className="wi-glyph">{captureGlyph(kind)}</span>
+                    <span className="wi-text">
+                      <div className="wi-preview">{previewText(c, 200) || '(no text)'}</div>
+                      <div className="wi-time">{formatRelative(c.createdAt)}</div>
+                    </span>
+                  </button>
+                  <button
+                    className="wi-skip"
+                    onClick={() => skip(c.id)}
+                    title="Doesn't need weaving — skip & don't ask again"
+                  >
+                    skip
+                  </button>
+                </div>
               )
             })}
           </div>

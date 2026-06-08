@@ -277,6 +277,31 @@ export function resolveSurface(id: string): Promise<Note> {
   return patchNote(id, { metadata: { state: 'resolved' } })
 }
 
+// ---- Weave triage ----
+//
+// "Unwoven" means *fresh loose threads*, not the whole historical archive (which
+// will never be fully woven, nor should it be). So: recent + linkless + not a
+// dream (complete as a dream) + not explicitly skipped. This is what the Weave
+// badge and the Unwoven tab count — the captures actually wanting attention.
+export async function listUnwovenCaptures(sinceDays = 14, limit = 80): Promise<Note[]> {
+  const since = new Date(Date.now() - sinceDays * 86400000).toISOString().slice(0, 10)
+  const caps = await listNotes({
+    tag: 'capture',
+    hasLinks: false,
+    dateFrom: since,
+    sort: 'desc',
+    limit,
+    includeContent: true,
+  })
+  return caps.filter((c) => !(c.tags ?? []).some((t) => t === 'dream-log' || t === 'weave/skip'))
+}
+
+// Mark a capture as not needing weaving (additive tag — the sacred content is
+// untouched). Removes it from the unwoven queue + badge.
+export function skipWeave(id: string): Promise<Note> {
+  return patchNote(id, { tags: { add: ['weave/skip'] } })
+}
+
 export function reopenSurface(id: string): Promise<Note> {
   return patchNote(id, { metadata: { state: 'open' } })
 }

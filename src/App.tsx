@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { clearConfig, hasConfig, isOAuth } from './vault/config'
-import { listNotes, listPendingProposals } from './vault/api'
+import { listUnwovenCaptures, listPendingProposals } from './vault/api'
 import { PROPOSAL_RESOLVED_EVENT } from './routes/Weave'
 import { EntityIndexProvider } from './vault/EntityIndex'
 import { useTheme } from './components/useTheme'
@@ -62,10 +62,7 @@ function Shell() {
   useEffect(() => {
     let live = true
     const load = () => {
-      Promise.all([
-        listPendingProposals(),
-        listNotes({ tag: 'capture', hasLinks: false, limit: 200 }),
-      ])
+      Promise.all([listPendingProposals(), listUnwovenCaptures()])
         .then(([ps, caps]) => { if (live) setWeaveCount(ps.length + caps.length) })
         .catch(() => { if (live) setWeaveCount(null) })
     }
