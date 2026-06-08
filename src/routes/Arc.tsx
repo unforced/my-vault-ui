@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { listNotes, getNote } from '../vault/api'
 import type { Note } from '../vault/types'
 import { useAsync } from '../vault/useAsync'
@@ -32,6 +32,7 @@ const arcHref = (n: Note) => `/note/${encodeURIComponent(n.path)}`
 // open into their months and episodes, each leaf one click from the synthesis
 // (and the captures beneath). The richest data, finally given a surface.
 export function Arc() {
+  const nav = useNavigate()
   const arc = useAsync(() => getNote('The Arc').catch(() => null), [])
   const eras = useAsync(() => listNotes({ tag: 'life/era', includeContent: true, limit: 50 }), [])
   const months = useAsync(() => listNotes({ tag: 'life/month', includeMetadata: true, limit: 200 }), [])
@@ -79,6 +80,10 @@ export function Arc() {
         <div className="kicker">unforced.life</div>
         <h1>The Arc</h1>
         <p className="sub">The long view of your life — chapters, woven from everything beneath.</p>
+        <label className="time-jump arc-jump">
+          jump to a day
+          <input type="date" onChange={(e) => { if (e.target.value) nav(`/time/${e.target.value}`) }} />
+        </label>
       </div>
 
       {arc.data?.content && (
@@ -124,7 +129,7 @@ export function Arc() {
                   {eraMonths.length > 0 && (
                     <div className="arc-months">
                       {eraMonths.map((mo) => (
-                        <Link key={mo.id} to={arcHref(mo)} className="arc-month">
+                        <Link key={mo.id} to={`/time/${windowOf(mo)}`} className="arc-month">
                           <span className="arc-month-label">{monthLabel(windowOf(mo))}</span>
                           {mo.metadata?.note_count ? (
                             <span className="arc-month-count">{String(mo.metadata.note_count)}</span>
