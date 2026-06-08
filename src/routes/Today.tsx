@@ -122,7 +122,7 @@ export function Today() {
         <nav className="domain-row">
           <Link to="/dev" className="domain-pill">Dev</Link>
           <Link to="/writing" className="domain-pill">Writing</Link>
-          <Link to="/note/The%20Arc" className="domain-pill">Life · the Arc</Link>
+          <Link to="/arc" className="domain-pill">Life · the Arc</Link>
         </nav>
       </div>
 

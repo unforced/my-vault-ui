@@ -11,6 +11,7 @@ import { Inbox } from './routes/Inbox'
 import { Dev } from './routes/Dev'
 import { Writing } from './routes/Writing'
 import { Schema } from './routes/Schema'
+import { Arc } from './routes/Arc'
 import { Weave } from './routes/Weave'
 import { Proposals } from './routes/Proposals'
 import { Browse } from './routes/Browse'
@@ -43,6 +44,7 @@ const router = createBrowserRouter(
         { path: 'dev', element: <Dev /> },
         { path: 'writing', element: <Writing /> },
         { path: 'schema', element: <Schema /> },
+        { path: 'arc', element: <Arc /> },
         { path: 'weave', element: <Weave /> },
         // Back-compat: the old Proposals route now redirects into Weave.
         { path: 'proposals', element: <Proposals /> },
