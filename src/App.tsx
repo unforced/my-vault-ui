@@ -173,6 +173,7 @@ function Shell() {
                   <NavLink to="/dev" className="overflow-item" onClick={() => setMenuOpen(false)}>Dev</NavLink>
                   <NavLink to="/writing" className="overflow-item" onClick={() => setMenuOpen(false)}>Writing</NavLink>
                   <NavLink to="/arc" className="overflow-item" onClick={() => setMenuOpen(false)}>Life · the Arc</NavLink>
+                  <NavLink to="/channels" className="overflow-item" onClick={() => setMenuOpen(false)}>Channels · chat</NavLink>
                   <NavLink to="/schema" className="overflow-item" onClick={() => setMenuOpen(false)}>Tag schema</NavLink>
                   <div className="overflow-sep" />
                   <button className="overflow-item" onClick={() => { toggle(); setMenuOpen(false) }}>
