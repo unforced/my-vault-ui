@@ -57,20 +57,37 @@ function Shell() {
   const nav = useNavigate()
   const loc = useLocation()
 
-  // Live combined count (pending proposals + unwoven captures) for the Weave nav
-  // badge. Refresh on mount and whenever an item is resolved anywhere in the app.
+  // Live combined count for the Weave nav badge. Proposals are cheap and load
+  // eagerly; the unwoven-captures query is expensive vault-side (a big-tag date
+  // scan that blocks the whole API for seconds), so its count comes from a
+  // localStorage cache — refreshed here at most every 15 min on a delay, off
+  // the critical path, and synced by real Weave-tab visits.
   useEffect(() => {
     let live = true
+    const cachedUnwoven = () => Number(localStorage.getItem('pv.unwovenCount') ?? 0)
     const load = () => {
-      Promise.all([listPendingProposals(), listUnwovenCaptures()])
-        .then(([ps, caps]) => { if (live) setWeaveCount(ps.length + caps.length) })
+      listPendingProposals()
+        .then((ps) => { if (live) setWeaveCount(ps.length + cachedUnwoven()) })
         .catch(() => { if (live) setWeaveCount(null) })
     }
+    const refreshUnwoven = () => {
+      const at = Number(localStorage.getItem('pv.unwovenCountAt') ?? 0)
+      if (Date.now() - at < 15 * 60_000) return
+      listUnwovenCaptures()
+        .then((caps) => {
+          localStorage.setItem('pv.unwovenCount', String(caps.length))
+          localStorage.setItem('pv.unwovenCountAt', String(Date.now()))
+          load()
+        })
+        .catch(() => {})
+    }
     load()
+    const idle = setTimeout(refreshUnwoven, 5000)
     window.addEventListener(PROPOSAL_RESOLVED_EVENT, load)
     window.addEventListener(CAPTURE_CREATED_EVENT, load)
     return () => {
       live = false
+      clearTimeout(idle)
       window.removeEventListener(PROPOSAL_RESOLVED_EVENT, load)
       window.removeEventListener(CAPTURE_CREATED_EVENT, load)
     }

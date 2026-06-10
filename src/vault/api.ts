@@ -262,10 +262,11 @@ export function deleteNote(id: string): Promise<void> {
 // puts in front of Aaron. Answered by a capture linking `responds-to` it;
 // answering auto-resolves it (the default). Few in number, so we fetch all and
 // split open/resolved client-side rather than relying on an indexed filter.
+// No include_links: nothing renders surface links, and link hydration is
+// vault-side expensive (~1s/note) — it took this query from 10ms to ~9s.
 export function listSurfaces(): Promise<Note[]> {
   const p = new URLSearchParams()
   p.set('tag', 'surface')
-  p.set('include_links', 'true')
   p.set('include_content', 'true')
   p.set('include_metadata', 'true')
   p.set('limit', '100')

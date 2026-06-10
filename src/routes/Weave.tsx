@@ -68,6 +68,15 @@ export function Weave() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Keep the nav badge's cached unwoven count fresh from real visits — the
+  // unwoven query is too expensive vault-side to run on every app load.
+  useEffect(() => {
+    if (unwoven.data) {
+      localStorage.setItem('pv.unwovenCount', String(unwoven.data.length))
+      localStorage.setItem('pv.unwovenCountAt', String(Date.now()))
+    }
+  }, [unwoven.data])
+
   // Pull a card from the list the moment it's resolved (optimistic), then
   // refresh from the vault so counts stay true.
   function onResolved(id: string, msg: string) {
