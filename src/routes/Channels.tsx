@@ -1,30 +1,43 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createNote } from '../vault/api'
+import { Link } from 'react-router-dom'
 import type { Note } from '../vault/types'
 import { subscribeNotes } from '../vault/sse'
+import { useAsync } from '../vault/useAsync'
 import { Markdown } from '../components/Markdown'
-
-const CH_TAG = '#channel-message'
-const CHANNEL_KEY = 'pv.channel'
-
-const tsOf = (n: Note) => String(n.metadata?.ts ?? n.createdAt ?? '')
-function isOutbound(n: Note): boolean {
-  const d = String(n.metadata?.direction ?? '')
-  if (d) return d === 'outbound'
-  return (n.tags ?? []).some((t) => t.endsWith('/outbound'))
-}
+import { SenderChip } from '../components/ChannelMessageCard'
+import { noteHref } from '../vault/util'
+import {
+  CH_TAG,
+  CHANNEL_KEY,
+  type Arm,
+  tsOf,
+  senderOf,
+  sparkOf,
+  statusDotClass,
+  fetchArmRoster,
+  sendChannelMessage,
+  selectChannel,
+  isOutbound,
+  markSeen,
+} from '../vault/channels'
 
 // The channels organ — talking to the Claude session through the vault, live.
 // A message is a #channel-message note; sending writes an inbound note, the
 // connected session replies with an outbound one, and both arrive in realtime
-// over the SSE subscription (no polling). Aaron's messages right, Uni's left.
+// over the SSE subscription (no polling). Aaron's messages right, arms' left —
+// each arm with its own sender chip; reports and dispatches render as cards.
 export function Channels() {
   const [channel, setChannel] = useState(() => localStorage.getItem(CHANNEL_KEY) || 'uni')
   const [msgs, setMsgs] = useState<Map<string, Note>>(new Map())
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [live, setLive] = useState(false)
+  const [picker, setPicker] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+
+  // The arm roster for the switcher. Failure is fine — the choices fall back to
+  // the current channel + 'uni' and the free-text "other…" path still works.
+  const roster = useAsync(() => fetchArmRoster().catch(() => [] as Arm[]), [])
 
   useEffect(() => {
     const inChannel = (n: Note) => String(n.metadata?.channel ?? '') === channel
@@ -56,6 +69,18 @@ export function Channels() {
     return unsub
   }, [channel])
 
+  // What the switcher shows: the roster, with 'uni' (and whatever channel is
+  // currently selected) always present even when the query came back empty.
+  const armChoices = useMemo(() => {
+    const arms = [...(roster.data ?? [])]
+    for (const c of [channel, 'uni']) {
+      if (!arms.some((a) => a.channel === c)) {
+        arms.unshift({ name: c, channel: c, status: '', summary: '' })
+      }
+    }
+    return arms
+  }, [roster.data, channel])
+
   const ordered = useMemo(
     () => [...msgs.values()].sort((a, b) => tsOf(a).localeCompare(tsOf(b))),
     [msgs],
@@ -65,33 +90,38 @@ export function Channels() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [ordered.length])
 
+  // Reading the thread counts as seeing its arm messages — keeps Home's feed
+  // and the Arms unread counts honest.
+  useEffect(() => {
+    markSeen(ordered.filter(isOutbound).map((n) => n.id))
+  }, [ordered])
+
   async function send() {
     const body = text.trim()
     if (!body || sending) return
     setSending(true)
-    const ts = new Date().toISOString()
     try {
-      await createNote({
-        path: `Channels/${channel}/${ts.replace(/[:.]/g, '-')}`,
-        content: body,
-        tags: [CH_TAG, `${CH_TAG}/inbound`],
-        metadata: { channel, direction: 'inbound', sender: 'aaron', ts },
-      })
+      await sendChannelMessage(channel, body)
       setText('')
     } finally {
       setSending(false)
     }
   }
 
-  function switchChannel() {
+  function pickChannel(c: string) {
+    setPicker(false)
+    if (!c || c === channel) return
+    selectChannel(c)
+    setMsgs(new Map())
+    setLive(false)
+    setChannel(c)
+  }
+
+  // Escape hatch for a channel that has no arm note (yet).
+  function customChannel() {
+    setPicker(false)
     const c = window.prompt('Channel name', channel)
-    if (c && c.trim()) {
-      const v = c.trim()
-      localStorage.setItem(CHANNEL_KEY, v)
-      setMsgs(new Map())
-      setLive(false)
-      setChannel(v)
-    }
+    if (c && c.trim()) pickChannel(c.trim())
   }
 
   return (
@@ -100,7 +130,29 @@ export function Channels() {
         <div className="kicker">channels · how we talk</div>
         <h1>
           #{channel}
-          <button className="rename-trigger" onClick={switchChannel}>switch</button>
+          <span className="chan-switch">
+            <button className="rename-trigger" onClick={() => setPicker((v) => !v)}>switch</button>
+            {picker && (
+              <>
+                <div className="overflow-scrim" onClick={() => setPicker(false)} />
+                <div className="chan-pop">
+                  {armChoices.map((a) => (
+                    <button
+                      key={a.channel}
+                      className={`chan-item${a.channel === channel ? ' on' : ''}`}
+                      title={a.summary || undefined}
+                      onClick={() => pickChannel(a.channel)}
+                    >
+                      <span className={`status-dot ${statusDotClass(a.status)}`} />
+                      #{a.channel}
+                      {a.status && <span className="chan-status">{a.status}</span>}
+                    </button>
+                  ))}
+                  <button className="chan-item other" onClick={customChannel}>other…</button>
+                </div>
+              </>
+            )}
+          </span>
         </h1>
         <p className="sub">
           <span className={`chat-dot${live ? ' on' : ''}`} />
@@ -113,13 +165,36 @@ export function Channels() {
           <p className="chat-empty">No messages yet on #{channel}. Say something to begin.</p>
         )}
         {ordered.map((m) => {
-          const out = isOutbound(m)
+          const sender = senderOf(m)
+          const mine = sender === 'aaron'
+          const kind = String(m.metadata?.kind ?? '')
+          const isCard = kind === 'report' || kind === 'dispatch'
+          const spark = kind === 'dispatch' ? sparkOf(m) : null
+          const asks = kind === 'report' ? m.metadata?.asks : undefined
+          // CSS rows keep their historical names: .in = Aaron (right), .out = arm (left).
           return (
-            <div key={m.id} className={`chat-row ${out ? 'out' : 'in'}`}>
-              <div className="chat-bubble">
+            <div key={m.id} className={`chat-row ${mine ? 'in' : 'out'}`}>
+              <div className={`chat-bubble${isCard ? ` k-${kind}` : ''}`}>
+                {(!mine || isCard) && (
+                  <div className="chat-bubble-head">
+                    {!mine && <SenderChip sender={sender} />}
+                    {isCard && <span className="chat-kind">{kind}</span>}
+                    {asks !== undefined && asks !== null && (
+                      <span className={`chat-asks${Number(asks) === 0 ? ' none' : ''}`}>
+                        {Number(asks) === 0 ? 'no asks' : `${asks} ask${Number(asks) === 1 ? '' : 's'}`}
+                      </span>
+                    )}
+                    {spark && (
+                      <Link className="chat-spark" to={noteHref(spark)} title={spark.path}>
+                        sparked by →
+                      </Link>
+                    )}
+                  </div>
+                )}
                 <Markdown content={m.content ?? ''} />
                 <span className="chat-ts">
                   {tsOf(m) ? new Date(tsOf(m)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  <Link className="chat-open" to={noteHref(m)} title="Open as note">↗</Link>
                 </span>
               </div>
             </div>

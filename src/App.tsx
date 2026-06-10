@@ -143,7 +143,8 @@ function Shell() {
             Vault
           </Link>
           <nav className="nav">
-            <NavLink to="/" end>Today</NavLink>
+            <NavLink to="/" end>Home</NavLink>
+            <NavLink to="/today">Today</NavLink>
             <NavLink to="/inbox">For You</NavLink>
             <NavLink to="/weave" className={({ isActive }) => (isActive ? 'active nav-proposals' : 'nav-proposals')}>
               Weave
@@ -174,6 +175,7 @@ function Shell() {
                   <NavLink to="/writing" className="overflow-item" onClick={() => setMenuOpen(false)}>Writing</NavLink>
                   <NavLink to="/arc" className="overflow-item" onClick={() => setMenuOpen(false)}>Life · the Arc</NavLink>
                   <NavLink to="/channels" className="overflow-item" onClick={() => setMenuOpen(false)}>Channels · chat</NavLink>
+                  <NavLink to="/arms" className="overflow-item" onClick={() => setMenuOpen(false)}>Arms · roster</NavLink>
                   <NavLink to="/schema" className="overflow-item" onClick={() => setMenuOpen(false)}>Tag schema</NavLink>
                   <div className="overflow-sep" />
                   <button className="overflow-item" onClick={() => { toggle(); setMenuOpen(false) }}>

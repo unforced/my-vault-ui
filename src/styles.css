@@ -1684,6 +1684,125 @@ button { font-family: inherit; cursor: pointer; }
 }
 .chat-input textarea:focus { outline: none; border-color: var(--clay-soft); }
 
+/* Sender chips — each arm gets a stable palette slot (hashed in Channels.tsx). */
+.chat-bubble-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.chat-sender {
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  border-radius: 999px; padding: 1px 8px;
+  color: var(--sender); background: color-mix(in srgb, var(--sender) 14%, transparent);
+}
+.sender-c0 { --sender: var(--clay); }
+.sender-c1 { --sender: var(--sage); }
+.sender-c2 { --sender: var(--gold); }
+.sender-c3 { --sender: var(--plum); }
+.sender-c4 { --sender: #6f9089; } /* eucalyptus — extends the warm palette */
+.sender-c5 { --sender: #b07585; } /* dusty rose */
+
+/* Report / dispatch cards — structural messages, quieter than chat bubbles. */
+.chat-bubble.k-report, .chat-bubble.k-dispatch {
+  max-width: 88%; background: var(--surface-2); border-color: var(--line);
+  border-left: 3px solid var(--sage-soft); border-radius: 12px;
+}
+.chat-bubble.k-dispatch { border-left-color: var(--gold); }
+.chat-kind { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.chat-asks { font-size: 10.5px; font-weight: 600; color: var(--clay); background: var(--terracotta-wash); border-radius: 999px; padding: 1px 8px; }
+.chat-asks.none { color: var(--ink-faint); background: transparent; font-weight: 450; font-style: italic; padding: 1px 0; }
+.chat-spark { margin-left: auto; font-size: 11px; color: var(--clay); text-decoration: none; }
+.chat-spark:hover { text-decoration: underline; }
+
+/* Every bubble is a note — quiet ↗ beside the timestamp opens the note view. */
+.chat-open { margin-left: 7px; color: var(--ink-faint); text-decoration: none; opacity: 0.45; transition: opacity .15s, color .15s; }
+.chat-bubble:hover .chat-open { opacity: 1; color: var(--clay); }
+
+/* Roster-backed channel switcher (arms from Uni/Arms/* + their status dots). */
+.chan-switch { position: relative; display: inline-block; }
+.chan-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 230px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow-lift); padding: 6px; display: flex; flex-direction: column;
+}
+.chan-item {
+  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+  background: none; border: none; border-radius: 8px; padding: 7px 10px; cursor: pointer;
+  font-family: var(--sans); font-size: 13.5px; font-weight: 450; color: var(--ink);
+}
+.chan-item:hover { background: var(--surface-2); }
+.chan-item.on { color: var(--clay); font-weight: 600; }
+.chan-item.other { color: var(--ink-faint); font-style: italic; }
+.chan-status { margin-left: auto; font-size: 10.5px; color: var(--ink-faint); }
+
+/* ── Home — the one stream ───────────────────────── */
+
+/* Attention ledger: a compact pulse line above everything. */
+.hm-ledger {
+  border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--surface-2);
+  padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: var(--ink-soft);
+}
+.hm-ledger-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.hm-waiting { font-weight: 600; color: var(--ink); }
+.hm-reported { color: var(--ink-soft); }
+.hm-arms { margin-left: auto; font-size: 12.5px; color: var(--clay); text-decoration: none; }
+.hm-arms:hover { text-decoration: underline; }
+.hm-quiet { margin-top: 4px; font-size: 12px; font-style: italic; color: var(--ink-faint); }
+
+/* Filter chips: All / For You / Weave / Channels. */
+.hm-chips { display: flex; gap: 7px; margin: 18px 0 14px; }
+.hm-chip {
+  background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 4px 13px;
+  font-size: 12.5px; color: var(--ink-soft); cursor: pointer; transition: border-color .15s, color .15s, background .15s;
+}
+.hm-chip:hover { border-color: var(--clay-soft); color: var(--clay); }
+.hm-chip.sel { background: var(--terracotta-wash); border-color: var(--clay-soft); color: var(--clay); font-weight: 600; }
+
+.hm-feed { display: flex; flex-direction: column; gap: 12px; }
+
+/* Channel message / report cards in the feed. */
+.cm-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 13px 16px 11px; box-shadow: var(--shadow-soft);
+}
+.cm-card.cm-report { background: var(--surface-2); border-left: 3px solid var(--sage-soft); }
+.cm-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
+.cm-chan { font-size: 12px; color: var(--clay); text-decoration: none; }
+.cm-chan:hover { text-decoration: underline; }
+.cm-when { margin-left: auto; font-size: 11.5px; color: var(--ink-faint); }
+.cm-body { font-size: 14px; line-height: 1.55; }
+.cm-body .markdown p { margin: 0 0 6px; }
+.cm-body .markdown p:last-child { margin-bottom: 0; }
+.cm-foot { display: flex; align-items: center; gap: 12px; margin-top: 9px; }
+.cm-reply-toggle {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--clay);
+}
+.cm-reply-toggle:hover { text-decoration: underline; }
+.cm-reply { flex: 1; display: flex; gap: 8px; align-items: flex-end; }
+.cm-reply textarea {
+  flex: 1; box-sizing: border-box; border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px;
+  font: inherit; font-size: 13.5px; line-height: 1.5; color: var(--ink); background: var(--surface); resize: vertical;
+}
+.cm-reply textarea:focus { outline: none; border-color: var(--clay-soft); }
+.cm-thread { margin-left: auto; font-size: 12px; color: var(--ink-faint); text-decoration: none; }
+.cm-thread:hover { color: var(--clay); text-decoration: underline; }
+
+/* ── Arms roster ─────────────────────────────────── */
+.arms-list { display: flex; flex-direction: column; gap: 10px; }
+.arm-row {
+  display: flex; gap: 16px; align-items: flex-start; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 13px 16px; box-shadow: var(--shadow-soft);
+}
+.arm-name { display: flex; align-items: center; gap: 9px; font-family: var(--serif); font-size: 16.5px; color: var(--ink); }
+.arm-status { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+.arm-summary { margin-top: 3px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.arm-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.arm-chan { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--clay); text-decoration: none; }
+.arm-chan:hover { text-decoration: underline; }
+.arm-unread {
+  font-size: 10.5px; font-weight: 600; color: #fff; background: var(--clay);
+  border-radius: 999px; padding: 0 6px; line-height: 16px; min-width: 16px; text-align: center;
+}
+.arm-last { font-size: 11.5px; color: var(--ink-faint); }
+
 /* Time navigator. */
 .time-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 12px; }
 .time-arrow {
