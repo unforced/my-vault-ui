@@ -2008,3 +2008,32 @@ button { font-family: inherit; cursor: pointer; }
 .grounded-cite:hover { border-left-color: var(--clay); }
 .gc-when { font-size: 11.5px; color: var(--clay); white-space: nowrap; flex-shrink: 0; }
 .gc-text { font-size: 13px; color: var(--ink-soft); line-height: 1.4; overflow: hidden; }
+
+/* ── Uni overview (Arms route): self-state card + recent log ── */
+.uni-now {
+  margin: 0 0 18px; border: 1px solid var(--line, rgba(0,0,0,0.09));
+  border-left: 3px solid var(--clay-soft); border-radius: 10px;
+  background: var(--surface-2, var(--cream-2)); overflow: hidden;
+}
+.uni-now-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  width: 100%; padding: 10px 14px; background: none; border: none; cursor: pointer; text-align: left;
+}
+.uni-now-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.uni-now-meta { font-size: 11.5px; color: var(--clay); white-space: nowrap; }
+.uni-now-body { padding: 2px 16px 12px; font-size: 13.5px; }
+.uni-now-open { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--clay); text-decoration: none; }
+.uni-now-open:hover { text-decoration: underline; }
+.uni-log { margin-top: 24px; border-top: 1px dashed var(--line, rgba(0,0,0,0.12)); padding-top: 14px; }
+.uni-log-head {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--clay);
+  font-weight: 600; margin-bottom: 8px;
+}
+.uni-log-row {
+  display: flex; flex-direction: column; gap: 1px; text-decoration: none;
+  padding: 7px 11px; border-radius: 8px; margin-bottom: 6px;
+  background: var(--surface-2, var(--cream-2)); border: 1px solid var(--line, rgba(0,0,0,0.07));
+}
+.uni-log-row:hover { border-color: var(--clay-soft); }
+.uni-log-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.uni-log-sum { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
